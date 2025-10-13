@@ -7,7 +7,7 @@ let package = Package(
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "swift-mdlint-ja", targets: ["swift-mdlint-ja"]),
+        .executable(name: "mdlint-ja", targets: ["swift-mdlint-ja"]),
         .library(name: "MDLintCore", targets: ["MDLintCore"]),
         .library(name: "MDLintRules", targets: ["MDLintRules"])
     ],
