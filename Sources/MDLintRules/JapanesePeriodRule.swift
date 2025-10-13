@@ -1,5 +1,6 @@
 import Foundation
 import Markdown
+import MDLintCore
 
 /// Rule: 終止符は「。」に統一する（段落テキスト内の文末の「.」や「．」を検出）
 public struct JapanesePeriodRule: Rule {
