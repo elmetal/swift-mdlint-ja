@@ -13,7 +13,7 @@ swift build
 Run the linter against one or more Markdown files or directories:
 
 ```bash
-swift run mdlint-ja README.md Docs/
+mdlint-ja Sample.md
 ```
 
 Key options:
