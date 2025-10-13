@@ -9,11 +9,3 @@ public protocol Rule {
     func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic]
     func fix(originalText: String) -> String
 }
-
-public enum DefaultRules {
-    public static let all: [Rule] = [
-        JapanesePeriodRule(),
-        HeadingTerminalPunctuationRule(),
-        HeadingLevelSkipRule()
-    ]
-}

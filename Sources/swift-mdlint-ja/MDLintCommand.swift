@@ -1,6 +1,7 @@
 import Foundation
 import ArgumentParser
 import MDLintCore
+import MDLintRules
 
 @main
 struct MDLintCommand: ParsableCommand {

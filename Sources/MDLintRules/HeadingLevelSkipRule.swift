@@ -1,5 +1,6 @@
 import Foundation
 import Markdown
+import MDLintCore
 
 /// Rule: 見出しレベルの飛び級（例: H2 -> H4）を禁止
 public struct HeadingLevelSkipRule: Rule {

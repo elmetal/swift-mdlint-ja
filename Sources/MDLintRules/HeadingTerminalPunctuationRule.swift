@@ -1,5 +1,6 @@
 import Foundation
 import Markdown
+import MDLintCore
 
 /// Rule: 見出しの文末に句読点を付けない（「。」「.」「．」「、」など）
 public struct HeadingTerminalPunctuationRule: Rule {
