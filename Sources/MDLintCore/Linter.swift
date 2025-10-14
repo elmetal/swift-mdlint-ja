@@ -1,7 +1,7 @@
 import Foundation
 import Markdown
 
-public final class Linter {
+public struct Linter {
     private let rules: [Rule]
 
     public init(rules: [Rule]) {
