@@ -40,6 +40,10 @@ let package = Package(
         .testTarget(
             name: "MDLintCoreTests",
             dependencies: ["MDLintCore"]
+        ),
+        .testTarget(
+            name: "MDLintRulesTests",
+            dependencies: ["MDLintRules"]
         )
     ]
 )
