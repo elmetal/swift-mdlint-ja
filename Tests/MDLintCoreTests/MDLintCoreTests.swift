@@ -47,7 +47,7 @@ struct DiagnosticFormatterTests {
             severity: .error
         )
 
-        let formatter = TextDiagnosticFormatter()
+        let formatter = TextDiagnosticFormatStyle()
         let formatted = formatter.format(diagnostic)
 
         #expect(formatted == "[ERROR] \(sampleFileURL.path):2:3 [example.rule] Example message")
@@ -64,7 +64,7 @@ struct DiagnosticFormatterTests {
             fixIt: "Do something"
         )
 
-        let formatter = GHADiagnosticFormatter()
+        let formatter = GHADiagnosticFormatStyle()
         let formatted = formatter.format(diagnostic)
 
         #expect(formatted == "::warning file=\(sampleFileURL.path),line=5,col=2::First line%0ASecond line (fix: Do something)")
