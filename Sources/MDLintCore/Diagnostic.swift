@@ -70,18 +70,3 @@ public struct GHADiagnosticFormatStyle: DiagnosticFormatStyle {
             .replacingOccurrences(of: "<MSG>", with: messageWithFixIt)
     }
 }
-
-public struct AnyDiagnosticFormatStyle: DiagnosticFormatStyle {
-    public typealias FormatInput = Diagnostic
-    public typealias FormatOutput = String
-
-    private let formatter: (Diagnostic) -> String
-
-    public init<S: DiagnosticFormatStyle>(_ style: S) where S.FormatOutput == String {
-        self.formatter = style.format
-    }
-
-    public func format(_ diagnostic: Diagnostic) -> String {
-        formatter(diagnostic)
-    }
-}
