@@ -29,31 +29,59 @@ public struct Diagnostic: Codable, Hashable {
     }
 }
 
-public protocol DiagnosticFormatter {
-    func format(_ d: Diagnostic) -> String
-}
+public protocol DiagnosticFormatStyle: FormatStyle where FormatInput == Diagnostic {}
 
-public struct TextDiagnosticFormatter: DiagnosticFormatter {
+public struct TextDiagnosticFormatStyle: DiagnosticFormatStyle {
+    public typealias FormatInput = Diagnostic
+    public typealias FormatOutput = String
+
     public init() {}
-    public func format(_ d: Diagnostic) -> String {
-        let loc = "\(d.file.path):\(d.line):\(d.column)"
-        let sev = d.severity.rawValue.uppercased()
-        return "[\(sev)] \(loc) [\(d.ruleID)] \(d.message)"
+
+    public func format(_ diagnostic: Diagnostic) -> String {
+        let location = "\(diagnostic.file.path):\(diagnostic.line):\(diagnostic.column)"
+        let severity = diagnostic.severity.rawValue.uppercased()
+        return "[\(severity)] \(location) [\(diagnostic.ruleID)] \(diagnostic.message)"
     }
 }
 
 /// GitHub Actions workflow command format
 /// ::error file=app.js,line=10,col=15::Something went wrong
-public struct GHADiagnosticFormatter: DiagnosticFormatter {
+public struct GHADiagnosticFormatStyle: DiagnosticFormatStyle {
+    public typealias FormatInput = Diagnostic
+    public typealias FormatOutput = String
+
     public init() {}
-    public func format(_ d: Diagnostic) -> String {
-        let level = (d.severity == .error) ? "error" : (d.severity == .warning ? "warning" : "notice")
-        let escMsg = d.message.replacingOccurrences(of: "\n", with: "%0A")
+
+    public func format(_ diagnostic: Diagnostic) -> String {
+        let level: String
+        switch diagnostic.severity {
+        case .error: level = "error"
+        case .warning: level = "warning"
+        case .info: level = "notice"
+        }
+        let escapedMessage = diagnostic.message.replacingOccurrences(of: "\n", with: "%0A")
+        let messageWithFixIt = escapedMessage + (diagnostic.fixIt.map { " (fix: \($0))" } ?? "")
+
         return "::<LEVEL> file=<FILE>,line=<LINE>,col=<COL>::<MSG>"
             .replacingOccurrences(of: "<LEVEL>", with: level)
-            .replacingOccurrences(of: "<FILE>", with: d.file.path)
-            .replacingOccurrences(of: "<LINE>", with: String(d.line))
-            .replacingOccurrences(of: "<COL>", with: String(d.column))
-            .replacingOccurrences(of: "<MSG>", with: escMsg + (d.fixIt.map { " (fix: \($0))" } ?? ""))
+            .replacingOccurrences(of: "<FILE>", with: diagnostic.file.path)
+            .replacingOccurrences(of: "<LINE>", with: String(diagnostic.line))
+            .replacingOccurrences(of: "<COL>", with: String(diagnostic.column))
+            .replacingOccurrences(of: "<MSG>", with: messageWithFixIt)
+    }
+}
+
+public struct AnyDiagnosticFormatStyle: DiagnosticFormatStyle {
+    public typealias FormatInput = Diagnostic
+    public typealias FormatOutput = String
+
+    private let formatter: (Diagnostic) -> String
+
+    public init<S: DiagnosticFormatStyle>(_ style: S) where S.FormatOutput == String {
+        self.formatter = style.format
+    }
+
+    public func format(_ diagnostic: Diagnostic) -> String {
+        formatter(diagnostic)
     }
 }

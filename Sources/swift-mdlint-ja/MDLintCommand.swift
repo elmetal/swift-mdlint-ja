@@ -39,11 +39,11 @@ struct MDLintCommand: ParsableCommand {
             }
         }
 
-        let formatter: DiagnosticFormatter = (format.lowercased() == "gha")
-            ? GHADiagnosticFormatter()
-            : TextDiagnosticFormatter()
+        let formatStyle = AnyDiagnosticFormatStyle((format.lowercased() == "gha")
+            ? GHADiagnosticFormatStyle()
+            : TextDiagnosticFormatStyle())
 
-        allDiagnostics.sorted(by: Diagnostic.sorter).forEach { print(formatter.format($0)) }
+        allDiagnostics.sorted(by: Diagnostic.sorter).forEach { print(formatStyle.format($0)) }
 
         if strict && !allDiagnostics.isEmpty {
             throw ExitCode(2)
