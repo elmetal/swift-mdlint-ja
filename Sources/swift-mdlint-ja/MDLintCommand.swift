@@ -19,12 +19,15 @@ struct MDLintCommand: ParsableCommand {
     @Flag(name: [.long], help: "Exit with non-zero status code when violations are found.")
     var strict: Bool = false
 
+    @Option(name: [.customLong("config")], help: "Path to a JSON file listing rule identifiers to enable.")
+    var configurationPath: String?
+
     @Argument(help: "Markdown files or directories to lint.")
     var paths: [String] = []
 
     mutating func run() throws {
         let fm = FileManager.default
-        let linter = Linter(rules: DefaultRules.all)
+        let linter = Linter(rules: try loadConfiguredRules(fileManager: fm))
         let urls = resolveTargets(paths: paths)
 
         var allDiagnostics: [Diagnostic] = []
@@ -46,6 +49,38 @@ struct MDLintCommand: ParsableCommand {
         if strict && !allDiagnostics.isEmpty {
             throw ExitCode(2)
         }
+    }
+
+    private func loadConfiguredRules(fileManager: FileManager) throws -> [Rule] {
+        guard let configurationPath else {
+            return DefaultRules.all
+        }
+
+        let configurationURL = URL(fileURLWithPath: configurationPath)
+        guard fileManager.fileExists(atPath: configurationURL.path) else {
+            throw ValidationError("Configuration file not found at \(configurationPath)")
+        }
+
+        let data = try Data(contentsOf: configurationURL)
+        let rawIdentifiers = try JSONDecoder().decode([String].self, from: data)
+
+        var identifiers: [DefaultRules.Identifier] = []
+        var unknownIdentifiers: [String] = []
+
+        for raw in rawIdentifiers {
+            if let identifier = DefaultRules.Identifier(rawValue: raw) {
+                identifiers.append(identifier)
+            } else {
+                unknownIdentifiers.append(raw)
+            }
+        }
+
+        if !unknownIdentifiers.isEmpty {
+            let warning = "warning: Ignoring unknown rule identifiers: \(unknownIdentifiers.joined(separator: ", "))\n"
+            FileHandle.standardError.write(Data(warning.utf8))
+        }
+
+        return DefaultRules.rules(for: identifiers)
     }
 
     private func resolveTargets(paths: [String]) -> [URL] {
