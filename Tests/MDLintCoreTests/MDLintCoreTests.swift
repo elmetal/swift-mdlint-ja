@@ -132,7 +132,7 @@ private struct ReplaceBadRule: Rule, AutoFixable {
         ]
     }
 
-    func fix(originalText: String) -> String {
+    func fixing(originalText: String) -> String {
         originalText.replacingOccurrences(of: "bad", with: "good")
     }
 }

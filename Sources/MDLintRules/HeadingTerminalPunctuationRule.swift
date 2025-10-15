@@ -37,7 +37,7 @@ public struct HeadingTerminalPunctuationRule: Rule, AutoFixable {
         return out
     }
 
-    public func fix(originalText: String) -> String {
+    public func fixing(originalText: String) -> String {
         let lines = originalText.components(separatedBy: "\n")
         var newLines: [String] = []
         for line in lines {
