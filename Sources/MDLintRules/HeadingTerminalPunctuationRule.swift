@@ -3,10 +3,9 @@ import Markdown
 import MDLintCore
 
 /// Rule: 見出しの文末に句読点を付けない（「。」「.」「．」「、」など）
-public struct HeadingTerminalPunctuationRule: Rule {
+public struct HeadingTerminalPunctuationRule: Rule, AutoFixable {
     public let id = "ja.heading.no-terminal-punctuation"
     public let description = "見出し（# ...）の末尾に句読点は付けないでください。"
-    public let isFixable = true
 
     public init() {}
 

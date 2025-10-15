@@ -3,10 +3,9 @@ import Markdown
 import MDLintCore
 
 /// Rule: 終止符は「。」に統一する（段落テキスト内の文末の「.」や「．」を検出）
-public struct JapanesePeriodRule: Rule {
+public struct JapanesePeriodRule: Rule, AutoFixable {
     public let id = "ja.period.prefer-fullwidth"
     public let description = "文末の終止符は「。」に統一してください。"
-    public let isFixable = true
 
     public init() {}
 
