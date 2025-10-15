@@ -110,10 +110,9 @@ struct LineColumnTests {
     }
 }
 
-private struct ReplaceBadRule: Rule {
+private struct ReplaceBadRule: Rule, AutoFixable {
     let id = "test.replace-bad"
     let description = "Replaces the word 'bad' with 'good'"
-    let isFixable = true
 
     func check(document _: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
         guard let range = originalText.range(of: "bad") else { return [] }

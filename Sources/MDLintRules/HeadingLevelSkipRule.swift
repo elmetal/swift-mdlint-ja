@@ -6,8 +6,6 @@ import MDLintCore
 public struct HeadingLevelSkipRule: Rule {
     public let id = "md.heading.no-skip-level"
     public let description = "見出しレベルを1段ずつ上げてください（例: H2の次はH3）。"
-    public let isFixable = false
-
     public init() {}
 
     public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
@@ -33,8 +31,6 @@ public struct HeadingLevelSkipRule: Rule {
         }
         return out
     }
-
-    public func fix(originalText: String) -> String { originalText }
 
     private func headingLevel(of line: String) -> Int? {
         let trimmed = line.trimmingCharacters(in: .whitespaces)

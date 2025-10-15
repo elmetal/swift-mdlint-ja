@@ -18,8 +18,10 @@ public struct Linter {
 
         if applyFixes {
             var fixed = content
-            for rule in rules where rule.isFixable {
-                fixed = rule.fix(originalText: fixed)
+            for rule in rules {
+                if let fixableRule = rule as? AutoFixable {
+                    fixed = fixableRule.fix(originalText: fixed)
+                }
             }
             return (diagnostics, fixed)
         } else {

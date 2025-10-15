@@ -4,8 +4,10 @@ import Markdown
 public protocol Rule {
     var id: String { get }
     var description: String { get }
-    /// Whether this rule can auto-fix the violation.
-    var isFixable: Bool { get }
     func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic]
+}
+
+public protocol AutoFixable {
+    /// Returns a new Markdown text with the violations fixed.
     func fix(originalText: String) -> String
 }
