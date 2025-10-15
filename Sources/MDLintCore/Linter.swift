@@ -20,7 +20,7 @@ public struct Linter {
             var fixed = content
             for rule in rules {
                 if let fixableRule = rule as? AutoFixable {
-                    fixed = fixableRule.fix(originalText: fixed)
+                    fixed = fixableRule.fixing(originalText: fixed)
                 }
             }
             return (diagnostics, fixed)

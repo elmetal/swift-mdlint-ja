@@ -34,7 +34,7 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
         return out
     }
 
-    public func fix(originalText: String) -> String {
+    public func fixing(originalText: String) -> String {
         var lines = originalText.components(separatedBy: "\n")
         for i in lines.indices {
             let line = lines[i]

@@ -9,5 +9,5 @@ public protocol Rule {
 
 public protocol AutoFixable {
     /// Returns a new Markdown text with the violations fixed.
-    func fix(originalText: String) -> String
+    func fixing(originalText: String) -> String
 }

@@ -24,7 +24,7 @@ struct JapanesePeriodRuleTests {
         let content = "一行目．  \n二行目.\n末尾はそのまま"
         let rule = JapanesePeriodRule()
 
-        let fixed = rule.fix(originalText: content)
+        let fixed = rule.fixing(originalText: content)
 
         #expect(fixed == "一行目。  \n二行目。\n末尾はそのまま")
     }
@@ -60,7 +60,7 @@ struct HeadingTerminalPunctuationRuleTests {
         let content = "# 見出し、\n## 次の見出し．\n通常の行"
         let rule = HeadingTerminalPunctuationRule()
 
-        let fixed = rule.fix(originalText: content)
+        let fixed = rule.fixing(originalText: content)
 
         #expect(fixed == "# 見出し\n## 次の見出し\n通常の行")
     }
