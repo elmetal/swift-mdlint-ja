@@ -153,9 +153,9 @@ struct InlineBacktickClosureRuleTests {
     }
 
     @Test func passesWhenBackticksAreClosed() {
-        let content = "これは `テスト` です\n```
+        let content = """これは `テスト` です\n```
 コードブロック内の ` は無視
-```"
+```"""
         let document = Document(parsing: content)
         let rule = InlineBacktickClosureRule()
 
