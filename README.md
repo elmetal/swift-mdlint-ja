@@ -1,4 +1,5 @@
 # swift-mdlint-ja
+[![Swift Tests](https://github.com/elmetal/swift-mdlint-ja/actions/workflows/swift-test.yml/badge.svg)](https://github.com/elmetal/swift-mdlint-ja/actions/workflows/swift-test.yml)
 
 Minimal Japanese Markdown linter written in Swift.
 
