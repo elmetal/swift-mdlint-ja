@@ -27,6 +27,7 @@ public enum DefaultRules {
                 return HeadingLevelSkipRule()
             case .inlineBacktickClosure:
                 return InlineBacktickClosureRule()
+            }
         }
     }
 }
