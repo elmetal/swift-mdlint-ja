@@ -13,6 +13,7 @@ public enum DefaultRules {
         case japanesePeriod = "ja.period.prefer-fullwidth"
         case headingTerminalPunctuation = "ja.heading.no-terminal-punctuation"
         case headingLevelNoSkip = "md.heading.no-skip-level"
+        case inlineBacktickClosure = "ja.backtick.unmatched"
 
         public func makeRule() -> Rule {
             switch self {
@@ -24,6 +25,8 @@ public enum DefaultRules {
                 return HeadingTerminalPunctuationRule()
             case .headingLevelNoSkip:
                 return HeadingLevelSkipRule()
+            case .inlineBacktickClosure:
+                return InlineBacktickClosureRule()
             }
         }
     }
