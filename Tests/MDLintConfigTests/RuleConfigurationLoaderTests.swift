@@ -36,9 +36,9 @@ struct RuleConfigurationLoaderTests {
             "unknown.rule"
         ])
         var warnedIdentifiers: [String] = []
-        let loader = RuleConfigurationLoader { identifiers in
+        let loader = RuleConfigurationLoader(unknownIdentifierHandler: { identifiers in
             warnedIdentifiers = identifiers
-        }
+        })
 
         _ = try loader.loadRules(configurationPath: temporaryURL.path)
 
