@@ -2,6 +2,7 @@ import Foundation
 import ArgumentParser
 import MDLintCore
 import MDLintRules
+import MDLintConfig
 
 @main
 struct MDLintCommand: ParsableCommand {
@@ -27,7 +28,19 @@ struct MDLintCommand: ParsableCommand {
 
     mutating func run() throws {
         let fm = FileManager.default
-        let linter = Linter(rules: try loadConfiguredRules(fileManager: fm))
+        let loader = RuleConfigurationLoader(fileManager: fm) { unknownIdentifiers in
+            let warning = "warning: Ignoring unknown rule identifiers: \(unknownIdentifiers.joined(separator: ", "))\n"
+            FileHandle.standardError.write(Data(warning.utf8))
+        }
+
+        let rules: [Rule]
+        do {
+            rules = try loader.loadRules(configurationPath: configurationPath)
+        } catch RuleConfigurationLoader.Error.fileNotFound(let path) {
+            throw ValidationError("Configuration file not found at \(path)")
+        }
+
+        let linter = Linter(rules: rules)
         let urls = resolveTargets(paths: paths)
 
         var allDiagnostics: [Diagnostic] = []
@@ -49,38 +62,6 @@ struct MDLintCommand: ParsableCommand {
         if strict && !allDiagnostics.isEmpty {
             throw ExitCode(2)
         }
-    }
-
-    private func loadConfiguredRules(fileManager: FileManager) throws -> [Rule] {
-        guard let configurationPath else {
-            return DefaultRules.all
-        }
-
-        let configurationURL = URL(fileURLWithPath: configurationPath)
-        guard fileManager.fileExists(atPath: configurationURL.path) else {
-            throw ValidationError("Configuration file not found at \(configurationPath)")
-        }
-
-        let data = try Data(contentsOf: configurationURL)
-        let rawIdentifiers = try JSONDecoder().decode([String].self, from: data)
-
-        var identifiers: [DefaultRules.Identifier] = []
-        var unknownIdentifiers: [String] = []
-
-        for raw in rawIdentifiers {
-            if let identifier = DefaultRules.Identifier(rawValue: raw) {
-                identifiers.append(identifier)
-            } else {
-                unknownIdentifiers.append(raw)
-            }
-        }
-
-        if !unknownIdentifiers.isEmpty {
-            let warning = "warning: Ignoring unknown rule identifiers: \(unknownIdentifiers.joined(separator: ", "))\n"
-            FileHandle.standardError.write(Data(warning.utf8))
-        }
-
-        return DefaultRules.rules(for: identifiers)
     }
 
     private func resolveTargets(paths: [String]) -> [URL] {
