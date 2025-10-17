@@ -1,4 +1,5 @@
 import Foundation
+import MDLintCore
 import MDLintRules
 
 public struct RuleConfigurationLoader {
