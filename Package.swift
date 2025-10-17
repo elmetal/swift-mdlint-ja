@@ -55,7 +55,9 @@ let package = Package(
         ),
         .testTarget(
             name: "MDLintConfigTests",
-            dependencies: ["MDLintConfig"]
+            dependencies: [
+                "MDLintConfig",
+            ]
         )
     ]
 )

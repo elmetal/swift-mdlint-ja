@@ -1,16 +1,20 @@
-import XCTest
-@testable import MDLintConfig
+import Foundation
 import MDLintRules
+@testable import MDLintConfig
+import Testing
 
-final class RuleConfigurationLoaderTests: XCTestCase {
-    func testReturnsAllRulesWhenConfigurationPathIsNil() throws {
+@Suite("RuleConfigurationLoader")
+struct RuleConfigurationLoaderTests {
+    @Test("returns all rules when configuration path is nil")
+    func returnsAllRulesWhenConfigurationPathIsNil() throws {
         let loader = RuleConfigurationLoader()
         let rules = try loader.loadRules(configurationPath: nil)
 
-        XCTAssertEqual(rules.map(\.id).sorted(), DefaultRules.all.map(\.id).sorted())
+        #expect(rules.map(\.id).sorted() == DefaultRules.all.map(\.id).sorted())
     }
 
-    func testLoadsRulesFromConfigurationFile() throws {
+    @Test("loads rules from configuration file")
+    func loadsRulesFromConfigurationFile() throws {
         let temporaryURL = try makeTemporaryConfigurationFile(contents: [
             "ja.ellipsis.prefer-double",
             "ja.period.prefer-fullwidth"
@@ -19,13 +23,14 @@ final class RuleConfigurationLoaderTests: XCTestCase {
 
         let rules = try loader.loadRules(configurationPath: temporaryURL.path)
 
-        XCTAssertEqual(rules.map(\.id), [
+        #expect(rules.map(\.id) == [
             "ja.ellipsis.prefer-double",
             "ja.period.prefer-fullwidth"
         ])
     }
 
-    func testWarnsAboutUnknownIdentifiers() throws {
+    @Test("warns about unknown identifiers")
+    func warnsAboutUnknownIdentifiers() throws {
         let temporaryURL = try makeTemporaryConfigurationFile(contents: [
             "ja.ellipsis.prefer-double",
             "unknown.rule"
@@ -37,18 +42,17 @@ final class RuleConfigurationLoaderTests: XCTestCase {
 
         _ = try loader.loadRules(configurationPath: temporaryURL.path)
 
-        XCTAssertEqual(warnedIdentifiers, ["unknown.rule"])
+        #expect(warnedIdentifiers == ["unknown.rule"])
     }
 
-    func testThrowsWhenConfigurationFileIsMissing() throws {
+    @Test("throws when configuration file is missing")
+    func throwsWhenConfigurationFileIsMissing() {
         let loader = RuleConfigurationLoader(fileManager: .default)
 
-        XCTAssertThrowsError(try loader.loadRules(configurationPath: "/path/to/missing.json")) { error in
-            XCTAssertEqual(error as? RuleConfigurationLoader.Error, .fileNotFound("/path/to/missing.json"))
+        #expect(throws: RuleConfigurationLoader.Error.fileNotFound("/path/to/missing.json")) {
+            try loader.loadRules(configurationPath: "/path/to/missing.json")
         }
     }
-
-    // MARK: - Helpers
 
     private func makeTemporaryConfigurationFile(contents: [String]) throws -> URL {
         let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
