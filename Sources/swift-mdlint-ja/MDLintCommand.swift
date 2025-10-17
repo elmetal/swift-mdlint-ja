@@ -28,10 +28,10 @@ struct MDLintCommand: ParsableCommand {
 
     mutating func run() throws {
         let fm = FileManager.default
-        let loader = RuleConfigurationLoader(fileManager: fm) { unknownIdentifiers in
+        let loader = RuleConfigurationLoader(fileManager: fm, unknownIdentifierHandler: { unknownIdentifiers in
             let warning = "warning: Ignoring unknown rule identifiers: \(unknownIdentifiers.joined(separator: ", "))\n"
             FileHandle.standardError.write(Data(warning.utf8))
-        }
+        })
 
         let rules: [Rule]
         do {

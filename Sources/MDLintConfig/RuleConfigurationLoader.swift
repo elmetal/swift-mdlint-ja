@@ -7,14 +7,14 @@ public struct RuleConfigurationLoader {
         case fileNotFound(String)
     }
 
-    public typealias WarningHandler = ([String]) -> Void
+    public typealias UnknownIdentifierHandler = ([String]) -> Void
 
     private let fileManager: FileManager
-    private let warningHandler: WarningHandler
+    private let unknownIdentifierHandler: UnknownIdentifierHandler
 
-    public init(fileManager: FileManager = .default, warningHandler: @escaping WarningHandler = { _ in }) {
+    public init(fileManager: FileManager = .default, unknownIdentifierHandler: @escaping UnknownIdentifierHandler = { _ in }) {
         self.fileManager = fileManager
-        self.warningHandler = warningHandler
+        self.unknownIdentifierHandler = unknownIdentifierHandler
     }
 
     public func loadRules(configurationPath: String?) throws -> [Rule] {
@@ -42,7 +42,7 @@ public struct RuleConfigurationLoader {
         }
 
         if !unknownIdentifiers.isEmpty {
-            warningHandler(unknownIdentifiers)
+            unknownIdentifierHandler(unknownIdentifiers)
         }
 
         return DefaultRules.rules(for: identifiers)
