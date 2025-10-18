@@ -30,14 +30,16 @@ jobs:
 
       - name: Build DocC documentation
         run: |
-          swift package \
-            --allow-writing-to-directory docs \
-            generate-documentation \
-            --target swift-mdlint-ja \
-            --disable-indexing \
-            --transform-for-static-hosting \
-            --hosting-base-path swift-mdlint-ja \
-            --output-path docs
+          xcodebuild docbuild \
+            -scheme swift-mdlint-ja \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath DerivedData
+
+          $(xcrun --find docc) process-archive \
+             transform-for-static-hosting DerivedData/Build/Products/Debug-*/swift-mdlint-ja.doccarchive \
+             --output-path ./docs \
+             --hosting-base-path "swift-mdlint-ja"
+
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
