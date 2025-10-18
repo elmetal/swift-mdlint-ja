@@ -1,0 +1,56 @@
+name: Deploy DocC to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-13
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: Resolve package dependencies
+        run: swift package resolve
+
+      - name: Build DocC documentation
+        run: |
+          swift package \
+            --allow-writing-to-directory docs \
+            generate-documentation \
+            --target swift-mdlint-ja \
+            --disable-indexing \
+            --transform-for-static-hosting \
+            --hosting-base-path swift-mdlint-ja \
+            --output-path docs
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
