@@ -41,3 +41,5 @@ The configuration file is a JSON array containing rule identifier strings. Unkno
 ]
 ```
 
+## Documentation
+https://elmetal.github.io/swift-mdlint-ja/documentation/
