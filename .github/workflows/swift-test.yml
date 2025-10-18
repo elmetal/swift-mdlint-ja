@@ -6,10 +6,12 @@ on:
     paths-ignore:
       - '*.md'
       - '**/*.md'
+      - '.github/workflows/docc-pages.yml'
   pull_request:
     paths-ignore:
       - '*.md'
       - '**/*.md'
+      - '.github/workflows/docc-pages.yml'
 
 jobs:
   test:
