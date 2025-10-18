@@ -31,8 +31,8 @@ jobs:
       - name: Build DocC documentation
         run: |
           xcodebuild docbuild \
-            -scheme swift-mdlint-ja \
-            -destination "generic/platform=iOS" \
+            -scheme swift-mdlint-ja-Package \
+            -destination "generic/platform=macOS" \
             -derivedDataPath DerivedData
 
           $(xcrun --find docc) process-archive \
