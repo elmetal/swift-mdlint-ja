@@ -2,7 +2,12 @@ import Foundation
 import Markdown
 import MDLintCore
 
-/// Rule: 見出しの文末に句読点を付けない（「。」「.」「．」「、」など）
+/// A rule that removes terminal punctuation from Markdown headings.
+///
+/// Headings should present concise labels that end without punctuation such as
+/// "。", "．", ".", "、", or ",". This rule scans each heading node in a parsed
+/// document and raises a diagnostic, offering an autofix that strips the trailing
+/// punctuation character when one is found.
 public struct HeadingTerminalPunctuationRule: Rule, AutoFixable {
     public let id = "ja.heading.no-terminal-punctuation"
     public let description = "見出し（# ...）の末尾に句読点は付けないでください。"

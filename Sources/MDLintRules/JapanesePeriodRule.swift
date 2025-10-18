@@ -2,7 +2,12 @@ import Foundation
 import Markdown
 import MDLintCore
 
-/// Rule: 終止符は「。」に統一する（段落テキスト内の文末の「.」や「．」を検出）
+/// A rule that standardizes sentence-ending punctuation to "。".
+///
+/// Japanese prose typically concludes sentences with the full-width "。"
+/// character. The rule reviews each line of Markdown text and raises a
+/// diagnostic—along with an autofix suggestion—whenever it finds a paragraph
+/// that ends in a half-width period.
 public struct JapanesePeriodRule: Rule, AutoFixable {
     public let id = "ja.period.prefer-fullwidth"
     public let description = "文末の終止符は「。」に統一してください。"

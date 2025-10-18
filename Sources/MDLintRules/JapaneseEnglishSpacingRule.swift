@@ -3,7 +3,12 @@ import Foundation
 import Markdown
 import MDLintCore
 
-/// Rule: 和文と英単語の間にスペースを入れない
+/// A rule that removes superfluous spaces between Japanese and Latin text.
+///
+/// Full-width Japanese characters and adjacent ASCII words should appear
+/// without separating spaces. The rule searches each line for whitespace that
+/// divides Japanese and English segments and produces diagnostics with autofix
+/// replacements that collapse the gap.
 public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
     public let id = "ja.spacing.no-space-between-japanese-and-english"
     public let description = "和文と英単語の間にスペースは入れないでください。"
