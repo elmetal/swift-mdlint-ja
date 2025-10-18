@@ -1,4 +1,3 @@
-
 import Foundation
 import Markdown
 import MDLintCore
@@ -27,20 +26,20 @@ public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
     }
 
     public func fixing(originalText: String) -> String {
-        let mutable = NSMutableString(string: originalText)
-        Self.removeSpacesMatched(by: Self.japaneseBeforeEnglishRegex, in: mutable)
-        Self.removeSpacesMatched(by: Self.englishBeforeJapaneseRegex, in: mutable)
-        return mutable as String
+        originalText
+            .replacing(Self.japaneseBeforeEnglishRegex) { match in
+                "\(match.output.1)\(match.output.3)"
+            }
+            .replacing(Self.englishBeforeJapaneseRegex) { match in
+                "\(match.output.1)\(match.output.3)"
+            }
     }
 
     private func diagnosticsForLine(_ line: String, lineNumber: Int, fileURL: URL) -> [Diagnostic] {
         var result: [Diagnostic] = []
-        let nsLine = line as NSString
-        let fullRange = NSRange(location: 0, length: nsLine.length)
 
-        Self.japaneseBeforeEnglishRegex.enumerateMatches(in: line, options: [], range: fullRange) { match, _, _ in
-            guard let match = match, let spaceRange = Range(match.range(at: 2), in: line) else { return }
-            let column = line.distance(from: line.startIndex, to: spaceRange.lowerBound) + 1
+        for match in line.matches(of: Self.japaneseBeforeEnglishRegex) {
+            let column = line.distance(from: line.startIndex, to: match.output.2.startIndex) + 1
             let diagnostic = Diagnostic(file: fileURL,
                                         line: lineNumber,
                                         column: column,
@@ -51,9 +50,8 @@ public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
             result.append(diagnostic)
         }
 
-        Self.englishBeforeJapaneseRegex.enumerateMatches(in: line, options: [], range: fullRange) { match, _, _ in
-            guard let match = match, let spaceRange = Range(match.range(at: 2), in: line) else { return }
-            let column = line.distance(from: line.startIndex, to: spaceRange.lowerBound) + 1
+        for match in line.matches(of: Self.englishBeforeJapaneseRegex) {
+            let column = line.distance(from: line.startIndex, to: match.output.2.startIndex) + 1
             let diagnostic = Diagnostic(file: fileURL,
                                         line: lineNumber,
                                         column: column,
@@ -67,16 +65,17 @@ public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
         return result
     }
 
-    private static let japaneseBeforeEnglishRegex = try! NSRegularExpression(pattern: "([\\p{Han}\\p{Hiragana}\\p{Katakana}々〆ヵヶ])([ \\t]+)([A-Za-z])")
-    private static let englishBeforeJapaneseRegex = try! NSRegularExpression(pattern: "([A-Za-z])([ \\t]+)([\\p{Han}\\p{Hiragana}\\p{Katakana}々〆ヵヶ])")
+    private static let japaneseBeforeEnglishRegex = try! Regex<(
+        Substring,
+        Substring,
+        Substring,
+        Substring
+    )>(#"([\p{Han}\p{Hiragana}\p{Katakana}々〆ヵヶ])([ \t]+)([A-Za-z])"#)
 
-    private static func removeSpacesMatched(by regex: NSRegularExpression, in text: NSMutableString) {
-        let string = text as String
-        let matches = regex.matches(in: string, range: NSRange(location: 0, length: text.length))
-        for match in matches.reversed() {
-            let left = text.substring(with: match.range(at: 1))
-            let right = text.substring(with: match.range(at: 3))
-            text.replaceCharacters(in: match.range, with: "\(left)\(right)")
-        }
-    }
+    private static let englishBeforeJapaneseRegex = try! Regex<(
+        Substring,
+        Substring,
+        Substring,
+        Substring
+    )>(#"([A-Za-z])([ \t]+)([\p{Han}\p{Hiragana}\p{Katakana}々〆ヵヶ])"#)
 }
