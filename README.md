@@ -1,5 +1,6 @@
 # swift-mdlint-ja
 [![Swift Tests](https://github.com/elmetal/swift-mdlint-ja/actions/workflows/swift-test.yml/badge.svg)](https://github.com/elmetal/swift-mdlint-ja/actions/workflows/swift-test.yml)
+[![Deploy DocC to GitHub Pages](https://github.com/elmetal/swift-mdlint-ja/actions/workflows/docc-pages.yml/badge.svg)](https://github.com/elmetal/swift-mdlint-ja/actions/workflows/docc-pages.yml)
 
 Minimal Japanese Markdown linter written in Swift.
 
