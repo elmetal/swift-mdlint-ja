@@ -2,7 +2,12 @@ import Foundation
 import Markdown
 import MDLintCore
 
-/// Rule: 見出しレベルの飛び級（例: H2 -> H4）を禁止
+/// A rule that prevents Markdown headings from skipping levels.
+///
+/// Markdown documents should promote heading levels sequentially so that an
+/// `H2` heading is followed by `H3`, not `H4`. The rule tracks the level of each
+/// heading that appears in the source text and emits a diagnostic whenever a
+/// heading jumps more than one level.
 public struct HeadingLevelSkipRule: Rule {
     public let id = "md.heading.no-skip-level"
     public let description = "見出しレベルを1段ずつ上げてください（例: H2の次はH3）。"

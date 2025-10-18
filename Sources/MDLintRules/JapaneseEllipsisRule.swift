@@ -2,7 +2,12 @@ import Foundation
 import Markdown
 import MDLintCore
 
-/// Rule: 3点リーダーは「……」に統一する（奇数個の連続した「…」を検出）
+/// A rule that enforces even-length ellipsis characters in Japanese text.
+///
+/// Japanese typography prefers ellipses rendered as paired "…" characters.
+/// This rule walks each line of Markdown source, searching for runs of odd
+/// length and recommending an autofix that inserts an additional ellipsis to
+/// reach the closest even count.
 public struct JapaneseEllipsisRule: Rule, AutoFixable {
     public let id = "ja.ellipsis.prefer-double"
     public let description = "3点リーダーは「……」に統一してください。"

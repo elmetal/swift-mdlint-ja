@@ -2,7 +2,11 @@ import Foundation
 import Markdown
 import MDLintCore
 
-/// Rule: インラインコードのバッククォートが閉じられているか検出する
+/// A rule that ensures inline code spans use balanced backticks.
+///
+/// Inline code snippets must open and close with the same number of backtick
+/// characters. This rule inspects each non-code-block line for stray backtick
+/// runs and reports diagnostics when a matching closing delimiter is missing.
 public struct InlineBacktickClosureRule: Rule {
     public let id = "ja.backtick.unmatched"
     public let description = "インラインコードのバッククォートは閉じてください。"
