@@ -1,8 +1,23 @@
 # ``MDLintRules``
 
-
 ## Overview
 
+The ``MDLintRules`` module contains the built-in linting rules that power SwiftMDLint's
+Japanese-focused Markdown checks. It bundles ready-to-use rule implementations and
+provides helpers for retrieving either the complete default rule set or only the rules
+matching a subset of identifiers. Import this module when you need to reference the
+individual rules directly or when you want to embed the default configuration in your
+own tooling.
 
 ## Topics
 
+### Rule Collections
+- ``DefaultRules``
+
+### Rules
+- ``HeadingLevelSkipRule``
+- ``HeadingTerminalPunctuationRule``
+- ``InlineBacktickClosureRule``
+- ``JapaneseEllipsisRule``
+- ``JapaneseEnglishSpacingRule``
+- ``JapanesePeriodRule``
