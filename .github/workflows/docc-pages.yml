@@ -36,7 +36,7 @@ jobs:
             -derivedDataPath DerivedData
 
           $(xcrun --find docc) process-archive \
-             transform-for-static-hosting DerivedData/Build/Products/Debug-*/swift-mdlint-ja.doccarchive \
+             transform-for-static-hosting DerivedData/Build/Products/Debug/swift-mdlint-ja.doccarchive \
              --output-path ./docs \
              --hosting-base-path "swift-mdlint-ja"
 
