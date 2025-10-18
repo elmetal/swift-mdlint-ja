@@ -14,10 +14,12 @@ own tooling.
 ### Rule Collections
 - ``DefaultRules``
 
-### Rules
+### Markdown Syntax Safeguards
 - ``HeadingLevelSkipRule``
-- ``HeadingTerminalPunctuationRule``
 - ``InlineBacktickClosureRule``
+
+### Japanese Style Consistency
+- ``HeadingTerminalPunctuationRule``
 - ``JapaneseEllipsisRule``
 - ``JapaneseEnglishSpacingRule``
 - ``JapanesePeriodRule``
