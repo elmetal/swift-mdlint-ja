@@ -3,7 +3,7 @@ import Markdown
 
 /// A common interface for Markdown lint rules that operate on a parsed document.
 /// Each rule inspects the entire document and reports violations as ``Diagnostic`` values.
-public protocol Rule {
+public protocol Rule: Sendable {
     /// A unique identifier string for the rule.
     var id: String { get }
     /// A human-readable description that summarizes the purpose of the rule.

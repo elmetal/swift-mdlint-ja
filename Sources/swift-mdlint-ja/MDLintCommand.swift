@@ -6,7 +6,7 @@ import MDLintConfig
 
 @main
 struct MDLintCommand: ParsableCommand {
-    static var configuration = CommandConfiguration(
+    static let configuration = CommandConfiguration(
         commandName: "mdlint-ja",
         abstract: "Minimal Japanese Markdown linter in Swift."
     )
