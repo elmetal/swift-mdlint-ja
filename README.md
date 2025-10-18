@@ -3,7 +3,8 @@
 
 Minimal Japanese Markdown linter written in Swift.
 
-> **Note**: This project is experimental and currently under active development.
+> [!IMPORTANT]
+> This project is experimental and currently under active development.
 
 ## Getting Started
 
