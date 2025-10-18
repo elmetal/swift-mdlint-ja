@@ -35,6 +35,16 @@ jobs:
             -destination "generic/platform=macOS" \
             -derivedDataPath DerivedData
 
+          (xcrun --find docc) merge \
+            DerivedData/Build/Products/Debug/MDLintCore.doccarchive \
+            DerivedData/Build/Products/Debug/MDLintRules.doccarchive \
+            DerivedData/Build/Products/Debug/MDLintConfig.doccarchive \
+            DerivedData/Build/Products/Debug/mdlint-ja.doccarchive \
+            --synthesized-landing-page-name swift-mdlint-ja \ 
+            --synthesized-landing-page-kind "Welcome To swift-mdlint-ja"  \
+            --synthesized-landing-page-topics-style compactGrid \
+            --output-path DerivedData/Build/Products/Debug/swift-mdlint-ja.doccarchive
+
           $(xcrun --find docc) process-archive \
              transform-for-static-hosting DerivedData/Build/Products/Debug/swift-mdlint-ja.doccarchive \
              --output-path ./docs \
