@@ -37,7 +37,7 @@ jobs:
             -destination "generic/platform=macOS" \
             -derivedDataPath DerivedData
 
-          (xcrun --find docc) merge \
+          $(xcrun --find docc) merge \
             DerivedData/Build/Products/Debug/MDLintCore.doccarchive \
             DerivedData/Build/Products/Debug/MDLintRules.doccarchive \
             DerivedData/Build/Products/Debug/MDLintConfig.doccarchive \
