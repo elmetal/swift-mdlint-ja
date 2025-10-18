@@ -15,6 +15,7 @@ public enum DefaultRules {
         case headingLevelNoSkip = "md.heading.no-skip-level"
         case inlineBacktickClosure = "ja.backtick.unmatched"
         case japaneseEnglishSpacing = "ja.spacing.no-space-between-japanese-and-english"
+        case halfwidthKana = "ja.kana.no-halfwidth"
 
         public func makeRule() -> Rule {
             switch self {
@@ -30,6 +31,8 @@ public enum DefaultRules {
                 return InlineBacktickClosureRule()
             case .japaneseEnglishSpacing:
                 return JapaneseEnglishSpacingRule()
+            case .halfwidthKana:
+                return HalfwidthKanaRule()
             }
         }
     }
