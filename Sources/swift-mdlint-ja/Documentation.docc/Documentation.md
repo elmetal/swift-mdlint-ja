@@ -48,3 +48,7 @@ Configuration files express an array of rule identifiers in JSON. Unknown identi
 Diagnostics contain the file path, line number, and rule identifier. When `--format gha` is enabled, the output can be pasted directly into GitHub Actions annotations. If `--fix` is provided, files are modified in place when a fix succeeds.
 
 ## Topics
+
+### Understanding the Tool
+
+- <doc:HowItWorks>
