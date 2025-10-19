@@ -52,3 +52,10 @@ Diagnostics contain the file path, line number, and rule identifier. When `--for
 ### Understanding the Tool
 
 - <doc:HowItWorks>
+
+### Command Options
+
+- <doc:FixOption>
+- <doc:FormatOption>
+- <doc:StrictOption>
+- <doc:ConfigOption>

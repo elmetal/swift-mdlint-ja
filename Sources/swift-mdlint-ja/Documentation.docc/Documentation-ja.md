@@ -48,3 +48,10 @@ mdlint-ja Articles
 違反はファイルパス、行番号、ルール識別子を含むメッセージとして出力されます。`--format gha` を使用すると GitHub Actions の注釈にそのまま貼り付けられる形式になります。`--fix` を併用した場合は、修正が成功したファイルがその場で更新されます。
 
 ## Topics
+
+### コマンドオプション
+
+- <doc:FixOption>
+- <doc:FormatOption>
+- <doc:StrictOption>
+- <doc:ConfigOption>
