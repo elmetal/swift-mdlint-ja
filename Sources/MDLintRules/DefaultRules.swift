@@ -16,6 +16,7 @@ public enum DefaultRules {
         case inlineBacktickClosure = "ja.backtick.unmatched"
         case japaneseEnglishSpacing = "ja.spacing.no-space-between-japanese-and-english"
         case halfwidthKana = "ja.kana.no-halfwidth"
+        case japaneseParticleDuplication = "ja.particle.no-duplicate"
 
         public func makeRule() -> Rule {
             switch self {
@@ -33,6 +34,8 @@ public enum DefaultRules {
                 return JapaneseEnglishSpacingRule()
             case .halfwidthKana:
                 return HalfwidthKanaRule()
+            case .japaneseParticleDuplication:
+                return JapaneseParticleDuplicationRule()
             }
         }
     }
