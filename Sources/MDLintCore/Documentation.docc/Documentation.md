@@ -10,3 +10,19 @@ formatting styles for reporting issues to users.
 
 ## Topics
 
+### Linting Orchestration
+- ``Linter``
+
+### Rule Protocols
+- ``Rule``
+- ``AutoFixable``
+
+### Diagnostic Reporting
+- ``Diagnostic``
+- ``Diagnostic/Severity``
+
+### Diagnostic Format Styles
+- ``DiagnosticFormatStyle``
+- ``TextDiagnosticFormatStyle``
+- ``GHADiagnosticFormatStyle``
+
