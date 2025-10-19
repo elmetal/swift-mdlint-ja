@@ -219,7 +219,7 @@ struct HalfwidthKanaRuleTests {
 
         let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
 
-        #expect(diagnostics.count == 1)
+        #expect(diagnostics.count == 3)
         let diagnostic = try #require(diagnostics.first)
         #expect(diagnostic.ruleID == rule.id)
         #expect(diagnostic.line == 1)
