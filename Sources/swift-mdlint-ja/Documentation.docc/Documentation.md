@@ -4,9 +4,6 @@
   @TechnologyRoot
 }
 
-## Japanese version 
-- <doc:Documentation-ja>
-
 ## Overview
 
 `swift-mdlint-ja` is a lightweight linter tailored for Japanese Markdown documents. It detects style violations such as inconsistent punctuation or trailing symbols in headings and, when possible, applies automatic fixes. The tool is distributed as a Swift CLI that you can run from `swift run` or by installing the compiled binary.
@@ -53,6 +50,8 @@ Configuration files express an array of rule identifiers in JSON. Unknown identi
 Diagnostics contain the file path, line number, and rule identifier. When `--format gha` is enabled, the output can be pasted directly into GitHub Actions annotations. If `--fix` is provided, files are modified in place when a fix succeeds.
 
 ## Topics
+
+- <doc:Documentation-ja>
 
 ### Understanding the Tool
 

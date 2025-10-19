@@ -1,9 +1,6 @@
-# swift-mdlint-ja (日本語)
+# swift-mdlint-ja-jp
 
-## English version
-- <doc:Documentation>
-
-## 概要
+## Overview
 
 `swift-mdlint-ja` は、日本語の Markdown 文書に特化したシンプルなリンターです。文章中の句読点の揺れや見出し末尾の記号といったスタイル違反を検出し、可能な場合には自動修正を適用します。Swift 製の CLI として提供されており、ビルド済みバイナリまたは `swift run` から利用できます。
 
@@ -49,6 +46,9 @@ mdlint-ja Articles
 違反はファイルパス、行番号、ルール識別子を含むメッセージとして出力されます。`--format gha` を使用すると GitHub Actions の注釈にそのまま貼り付けられる形式になります。`--fix` を併用した場合は、修正が成功したファイルがその場で更新されます。
 
 ## Topics
+
+### English version
+- <doc:Documentation>
 
 ### コマンドオプション
 
