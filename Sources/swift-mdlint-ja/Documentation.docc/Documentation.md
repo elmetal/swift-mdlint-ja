@@ -1,6 +1,11 @@
-# ``swift-mdlint-ja``
+# swift-mdlint-ja
 
-See the [Japanese version](<doc:Documentation-ja>).
+@Metadata {
+  @TechnologyRoot
+}
+
+## Japanese version 
+- <doc:Documentation-ja>
 
 ## Overview
 

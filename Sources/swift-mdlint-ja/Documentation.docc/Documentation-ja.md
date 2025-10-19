@@ -1,6 +1,7 @@
-# ``swift-mdlint-ja`` (日本語)
+# swift-mdlint-ja (日本語)
 
-[English version](<doc:Documentation>)
+## English version
+- <doc:Documentation>
 
 ## 概要
 
