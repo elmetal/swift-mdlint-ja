@@ -51,6 +51,7 @@ Diagnostics contain the file path, line number, and rule identifier. When `--for
 
 ## Topics
 
+### Japanese Version
 - <doc:Documentation-ja>
 
 ### Understanding the Tool
