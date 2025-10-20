@@ -18,6 +18,7 @@ public enum DefaultRules {
         case halfwidthKana = "ja.kana.no-halfwidth"
         case japaneseParticleDuplication = "ja.particle.no-duplicate"
         case zeroWidthSpace = "md.whitespace.no-zero-width-space"
+        case controlCharacter = "md.characters.no-control"
 
         public func makeRule() -> Rule {
             switch self {
@@ -39,6 +40,8 @@ public enum DefaultRules {
                 return JapaneseParticleDuplicationRule()
             case .zeroWidthSpace:
                 return ZeroWidthSpaceRule()
+            case .controlCharacter:
+                return ControlCharacterRule()
             }
         }
     }
