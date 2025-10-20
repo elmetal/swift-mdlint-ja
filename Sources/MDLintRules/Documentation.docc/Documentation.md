@@ -20,10 +20,15 @@ own tooling.
 - ``InlineBacktickClosureRule``
 - ``ZeroWidthSpaceRule``
 
+### Japanese Grammar Support
+- ``JapaneseParticleDuplicationRule``
+
+### Japanese Readability Support
+- ``JapaneseCommaLimitRule``
+
 ### Japanese Style Consistency
 - ``HalfwidthKanaRule``
 - ``HeadingTerminalPunctuationRule``
 - ``JapaneseEllipsisRule``
 - ``JapaneseEnglishSpacingRule``
-- ``JapaneseParticleDuplicationRule``
 - ``JapanesePeriodRule``
