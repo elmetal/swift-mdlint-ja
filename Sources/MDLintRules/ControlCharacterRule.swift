@@ -12,12 +12,6 @@ public struct ControlCharacterRule: Rule, AutoFixable {
     public let id = "md.characters.no-control"
     public let description = "制御文字を含めないでください。"
 
-    private static var disallowedControlCharacters: CharacterSet = {
-        var set = CharacterSet.controlCharacters
-        set.remove(charactersIn: "\n\r\t")
-        return set
-    }()
-
     public init() {}
 
     public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
@@ -25,7 +19,7 @@ public struct ControlCharacterRule: Rule, AutoFixable {
         let lines = originalText.components(separatedBy: "\n")
 
         for (lineIndex, line) in lines.enumerated() {
-            for (columnOffset, scalar) in line.unicodeScalars.enumerated() where Self.disallowedControlCharacters.contains(scalar) {
+            for (columnOffset, scalar) in line.unicodeScalars.enumerated() where CharacterSet.disallowedControl.contains(scalar) {
                 let column = columnOffset + 1
                 let codePoint = String(format: "U+%04X", scalar.value)
                 let diagnostic = Diagnostic(
@@ -45,6 +39,14 @@ public struct ControlCharacterRule: Rule, AutoFixable {
     }
 
     public func fixing(originalText: String) -> String {
-        originalText.components(separatedBy: Self.disallowedControlCharacters).joined()
+        originalText.components(separatedBy: .disallowedControl).joined()
     }
+}
+
+extension CharacterSet {
+    static let disallowedControl: Self = {
+        var set = CharacterSet.controlCharacters
+        set.remove(charactersIn: "\n\r\t")
+        return set
+    }()
 }
