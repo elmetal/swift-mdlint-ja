@@ -16,13 +16,7 @@ public struct SentenceLengthLimitRule: Rule {
     public init() {}
 
     public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
-        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-        let matches = detector?.matches(
-            in: originalText,
-            options: [],
-            range: NSRange(location: 0, length: (originalText as NSString).length)
-        ) ?? []
-        let urlRanges = matches.compactMap { Range($0.range, in: originalText) }
+        let urlRanges = Self.urlRanges(in: originalText)
 
         var currentURLRangeIndex = 0
 
@@ -103,5 +97,24 @@ public struct SentenceLengthLimitRule: Rule {
         emitDiagnosticIfNeeded(currentSentenceLength: currentLength)
 
         return diagnostics
+    }
+}
+
+extension SentenceLengthLimitRule {
+    /// Returns the ranges of URL substrings inside `text` using a lightweight regular expression.
+    ///
+    /// `NSDataDetector` is unavailable on Linux, so we approximate link detection with an
+    /// RFC-3986-inspired expression that targets common schemes (`http`, `https`, `ftp`).
+    /// The ranges are returned in ascending order and can be used directly during scanning.
+    static func urlRanges(in text: String) -> [Range<String.Index>] {
+        let pattern = #"(https?|ftp)://[^\s<>()\[\]{}\u3000]+"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return []
+        }
+
+        let searchRange = NSRange(text.startIndex..., in: text)
+        return regex.matches(in: text, options: [], range: searchRange).compactMap { match in
+            Range(match.range, in: text)
+        }
     }
 }
