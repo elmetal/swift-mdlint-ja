@@ -20,6 +20,7 @@ public enum DefaultRules {
         case zeroWidthSpace = "md.whitespace.no-zero-width-space"
         case controlCharacter = "md.characters.no-control"
         case japaneseCommaLimit = "ja.comma.max-three"
+        case sentenceLengthLimit = "ja.sentence.max-one-hundred-characters"
 
         public func makeRule() -> Rule {
             switch self {
@@ -45,6 +46,8 @@ public enum DefaultRules {
                 return ControlCharacterRule()
             case .japaneseCommaLimit:
                 return JapaneseCommaLimitRule()
+            case .sentenceLengthLimit:
+                return SentenceLengthLimitRule()
             }
         }
     }
