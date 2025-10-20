@@ -19,7 +19,9 @@ own tooling.
 - ``InlineBacktickClosureRule``
 
 ### Japanese Style Consistency
+- ``HalfwidthKanaRule``
 - ``HeadingTerminalPunctuationRule``
 - ``JapaneseEllipsisRule``
 - ``JapaneseEnglishSpacingRule``
+- ``JapaneseParticleDuplicationRule``
 - ``JapanesePeriodRule``
