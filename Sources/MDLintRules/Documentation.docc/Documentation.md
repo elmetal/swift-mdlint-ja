@@ -15,8 +15,10 @@ own tooling.
 - ``DefaultRules``
 
 ### Markdown Syntax Safeguards
+- ``ControlCharacterRule``
 - ``HeadingLevelSkipRule``
 - ``InlineBacktickClosureRule``
+- ``ZeroWidthSpaceRule``
 
 ### Japanese Style Consistency
 - ``HalfwidthKanaRule``
