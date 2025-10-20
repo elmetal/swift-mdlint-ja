@@ -19,6 +19,7 @@ public enum DefaultRules {
         case japaneseParticleDuplication = "ja.particle.no-duplicate"
         case zeroWidthSpace = "md.whitespace.no-zero-width-space"
         case controlCharacter = "md.characters.no-control"
+        case japaneseCommaLimit = "ja.comma.max-three"
 
         public func makeRule() -> Rule {
             switch self {
@@ -42,6 +43,8 @@ public enum DefaultRules {
                 return ZeroWidthSpaceRule()
             case .controlCharacter:
                 return ControlCharacterRule()
+            case .japaneseCommaLimit:
+                return JapaneseCommaLimitRule()
             }
         }
     }
