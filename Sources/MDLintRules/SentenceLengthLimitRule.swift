@@ -104,10 +104,10 @@ extension SentenceLengthLimitRule {
     /// Returns the ranges of URL substrings inside `text` using a lightweight regular expression.
     ///
     /// `NSDataDetector` is unavailable on Linux, so we approximate link detection with an
-    /// RFC-3986-inspired expression that targets common schemes (`http`, `https`, `ftp`).
+    /// RFC-3986-inspired expression that accepts any valid URL scheme.
     /// The ranges are returned in ascending order and can be used directly during scanning.
     static func urlRanges(in text: String) -> [Range<String.Index>] {
-        let pattern = #"(https?|ftp)://[^\s<>()\[\]{}\u3000]+"#
+        let pattern = #"[A-Za-z][A-Za-z0-9+.-]*://[^\s<>()\[\]{}\u3000]+"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
             return []
         }

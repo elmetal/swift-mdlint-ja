@@ -33,6 +33,19 @@ struct SentenceLengthLimitRuleTests {
         #expect(diagnostics.isEmpty)
     }
 
+    @Test func supportsVariousURLSchemes() {
+        let url = "custom+scheme-1.2://example"
+        let prefix = String(repeating: "う", count: 60)
+        let suffix = String(repeating: "え", count: 40)
+        let content = prefix + url + suffix + "。"
+        let document = Document(parsing: content)
+        let rule = SentenceLengthLimitRule()
+
+        let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+        #expect(diagnostics.isEmpty)
+    }
+
     @Test func detectsAcrossMultipleSentences() throws {
         let firstSentence = "短い文です。"
         let longSentence = String(repeating: "う", count: 101) + "！"
