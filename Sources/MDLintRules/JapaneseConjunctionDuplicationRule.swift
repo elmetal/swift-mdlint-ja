@@ -4,6 +4,11 @@ import MDLintCore
 
 /// A rule that detects back-to-back Japanese conjunctions.
 ///
+/// Consecutive conjunctions such as "しかし、しかし" make prose feel redundant
+/// and disrupt the flow of a sentence. This rule walks through each sentence,
+/// records the first conjunction it encounters, and reports a diagnostic when
+/// the same conjunction appears at the beginning of the next sentence.
+///
 /// Inspired by https://github.com/textlint-ja/textlint-rule-no-doubled-conjunction.
 public struct JapaneseConjunctionDuplicationRule: Rule {
     public let id = "ja.conjunction.no-duplicate"
