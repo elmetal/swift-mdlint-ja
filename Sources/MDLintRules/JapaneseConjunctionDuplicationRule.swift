@@ -35,8 +35,7 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
             guard let occurrence = firstConjunction(in: originalText, sentenceRange: range) else { continue }
 
             if let previous = lastConjunction, previous.conjunction == occurrence.conjunction {
-                let utf16Offset = originalText[..<occurrence.range.lowerBound].utf16.count
-                let (line, column) = originalText.lineColumn(for: utf16Offset)
+                let (line, column) = lineAndColumn(in: originalText, at: occurrence.range.lowerBound)
                 let diagnostic = Diagnostic(
                     file: fileURL,
                     line: line,
@@ -126,6 +125,24 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
             }
         }
         return true
+    }
+
+    private func lineAndColumn(in text: String, at index: String.Index) -> (Int, Int) {
+        var line = 1
+        var column = 1
+        var current = text.startIndex
+
+        while current < index {
+            if text[current] == "\n" {
+                line += 1
+                column = 1
+            } else {
+                column += 1
+            }
+            current = text.index(after: current)
+        }
+
+        return (line, column)
     }
 
     private struct ConjunctionOccurrence {
