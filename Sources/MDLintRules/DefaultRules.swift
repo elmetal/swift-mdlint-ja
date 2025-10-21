@@ -17,6 +17,7 @@ public enum DefaultRules {
         case japaneseEnglishSpacing = "ja.spacing.no-space-between-japanese-and-english"
         case halfwidthKana = "ja.kana.no-halfwidth"
         case japaneseParticleDuplication = "ja.particle.no-duplicate"
+        case japaneseConjunctionDuplication = "ja.conjunction.no-duplicate"
         case zeroWidthSpace = "md.whitespace.no-zero-width-space"
         case controlCharacter = "md.characters.no-control"
         case japaneseCommaLimit = "ja.comma.max-three"
@@ -40,6 +41,8 @@ public enum DefaultRules {
                 return HalfwidthKanaRule()
             case .japaneseParticleDuplication:
                 return JapaneseParticleDuplicationRule()
+            case .japaneseConjunctionDuplication:
+                return JapaneseConjunctionDuplicationRule()
             case .zeroWidthSpace:
                 return ZeroWidthSpaceRule()
             case .controlCharacter:
