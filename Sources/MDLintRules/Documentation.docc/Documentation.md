@@ -22,9 +22,11 @@ own tooling.
 
 ### Japanese Grammar Support
 - ``JapaneseParticleDuplicationRule``
+- ``JapaneseConjunctionDuplicationRule``
 
 ### Japanese Readability Support
 - ``JapaneseCommaLimitRule``
+- ``SentenceLengthLimitRule``
 
 ### Japanese Style Consistency
 - ``HalfwidthKanaRule``
