@@ -41,9 +41,9 @@ public struct RuleConfigurationLoader {
     /// - Throws: ``Error/fileNotFound(_:)`` when the configuration file does
     ///   not exist, or an error if the JSON cannot be decoded.
     /// - Returns: The resolved lint rules.
-    public func loadRules(configurationPath: String?) throws -> [Rule] {
+    public func loadRules(configurationPath: String?, options: DefaultRules.Options = .init()) throws -> [Rule] {
         guard let configurationPath else {
-            return DefaultRules.all
+            return DefaultRules.all(options: options)
         }
 
         let configurationURL = URL(fileURLWithPath: configurationPath)
@@ -69,6 +69,6 @@ public struct RuleConfigurationLoader {
             unknownIdentifierHandler(unknownIdentifiers)
         }
 
-        return DefaultRules.rules(for: identifiers)
+        return DefaultRules.rules(for: identifiers, options: options)
     }
 }
