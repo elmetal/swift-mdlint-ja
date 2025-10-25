@@ -23,6 +23,9 @@ struct MDLintCommand: ParsableCommand {
     @Option(name: [.customLong("config")], help: "Path to a JSON file listing rule identifiers to enable.")
     var configurationPath: String?
 
+    @Option(name: [.customLong("politeness-style")], help: "Preferred Japanese politeness style: auto | desumasu | dearu.")
+    var politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle = .auto
+
     @Argument(help: "Markdown files or directories to lint.")
     var paths: [String] = []
 
@@ -35,7 +38,8 @@ struct MDLintCommand: ParsableCommand {
 
         let rules: [Rule]
         do {
-            rules = try loader.loadRules(configurationPath: configurationPath)
+            rules = try loader.loadRules(configurationPath: configurationPath,
+                                         options: .init(politenessStyle: politenessStyle))
         } catch RuleConfigurationLoader.Error.fileNotFound(let path) {
             throw ValidationError("Configuration file not found at \(path)")
         }
@@ -93,3 +97,5 @@ struct MDLintCommand: ParsableCommand {
         return urls
     }
 }
+
+extension JapanesePolitenessStyleConsistencyRule.PreferredStyle: ExpressibleByArgument {}

@@ -2,10 +2,20 @@ import Foundation
 import MDLintCore
 
 public enum DefaultRules {
-    public static let all: [Rule] = Identifier.allCases.map { $0.makeRule() }
+    public struct Options {
+        public var politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle
 
-    public static func rules(for identifiers: [Identifier]) -> [Rule] {
-        identifiers.map { $0.makeRule() }
+        public init(politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle = .auto) {
+            self.politenessStyle = politenessStyle
+        }
+    }
+
+    public static func all(options: Options = Options()) -> [Rule] {
+        Identifier.allCases.map { $0.makeRule(options: options) }
+    }
+
+    public static func rules(for identifiers: [Identifier], options: Options = Options()) -> [Rule] {
+        identifiers.map { $0.makeRule(options: options) }
     }
 
     public enum Identifier: String, CaseIterable, Codable {
@@ -22,8 +32,9 @@ public enum DefaultRules {
         case controlCharacter = "md.characters.no-control"
         case japaneseCommaLimit = "ja.comma.max-three"
         case sentenceLengthLimit = "ja.sentence.max-one-hundred-characters"
+        case japanesePolitenessStyleConsistency = "ja.style.no-mix-dearu-desumasu"
 
-        public func makeRule() -> Rule {
+        public func makeRule(options: Options) -> Rule {
             switch self {
             case .japaneseEllipsis:
                 return JapaneseEllipsisRule()
@@ -51,6 +62,8 @@ public enum DefaultRules {
                 return JapaneseCommaLimitRule()
             case .sentenceLengthLimit:
                 return SentenceLengthLimitRule()
+            case .japanesePolitenessStyleConsistency:
+                return JapanesePolitenessStyleConsistencyRule(preferredStyle: options.politenessStyle)
             }
         }
     }
