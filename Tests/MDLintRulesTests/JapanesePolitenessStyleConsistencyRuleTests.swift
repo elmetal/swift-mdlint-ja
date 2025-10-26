@@ -5,7 +5,7 @@ import Testing
 
 @Suite("JapanesePolitenessStyleConsistencyRule")
 struct JapanesePolitenessStyleConsistencyRuleTests {
-    @Test func reportsDearuWhenDesumasuIsMajority() {
+    @Test func reportsDearuWhenDesumasuIsMajority() throws {
         let content = "これはテストです。\nこの文も丁寧語です。\nこれは事実である。"
         let document = Document(parsing: content)
         let rule = JapanesePolitenessStyleConsistencyRule()
@@ -18,7 +18,7 @@ struct JapanesePolitenessStyleConsistencyRuleTests {
         #expect(diagnostic.ruleID == rule.id)
     }
 
-    @Test func reportsDesumasuWhenDearuPreferred() {
+    @Test func reportsDesumasuWhenDearuPreferred() throws {
         let content = "これは事実である。\n別の文だ。\nしかし説明します。"
         let document = Document(parsing: content)
         let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .dearu)
