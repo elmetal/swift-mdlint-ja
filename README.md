@@ -27,6 +27,7 @@ Key options:
 - `--format <text|gha>`: Choose plain text output (default) or GitHub Actions format.
 - `--strict`: Exit with a non-zero status code when violations are detected.
 - `--config <path>`: Load a JSON file that lists the rule identifiers to enable.
+- `--politeness-style <auto|desumasu|dearu>`: Control how the politeness-style consistency rule resolves conflicts.
 
 When no paths are provided the linter scans the current directory recursively for files with the `.md` extension.
 

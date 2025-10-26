@@ -1,7 +1,10 @@
 import Foundation
+import Markdown
 import MDLintRules
 @testable import MDLintConfig
 import Testing
+
+private let sampleFileURL = URL(fileURLWithPath: "/tmp/config-rule.md")
 
 @Suite("RuleConfigurationLoader")
 struct RuleConfigurationLoaderTests {
@@ -10,7 +13,7 @@ struct RuleConfigurationLoaderTests {
         let loader = RuleConfigurationLoader()
         let rules = try loader.loadRules(configurationPath: nil)
 
-        #expect(rules.map(\.id).sorted() == DefaultRules.all.map(\.id).sorted())
+        #expect(rules.map(\.id).sorted() == DefaultRules.all().map(\.id).sorted())
     }
 
     @Test("loads rules from configuration file")
@@ -52,6 +55,19 @@ struct RuleConfigurationLoaderTests {
         #expect(throws: RuleConfigurationLoader.Error.fileNotFound("/path/to/missing.json")) {
             try loader.loadRules(configurationPath: "/path/to/missing.json")
         }
+    }
+
+    @Test("passes politeness style option to rules")
+    func passesPolitenessStyleOptionToRules() throws {
+        let loader = RuleConfigurationLoader()
+        let rules = try loader.loadRules(configurationPath: nil, options: .init(politenessStyle: .dearu))
+
+        let politenessRule = try #require(rules.first { $0.id == "ja.style.no-mix-dearu-desumasu" })
+        let content = "これはテストです。"
+        let document = Document(parsing: content)
+        let diagnostics = politenessRule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+        #expect(diagnostics.count == 1)
     }
 
     private func makeTemporaryConfigurationFile(contents: [String]) throws -> URL {
