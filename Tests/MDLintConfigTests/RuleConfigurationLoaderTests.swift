@@ -4,6 +4,8 @@ import MDLintRules
 @testable import MDLintConfig
 import Testing
 
+private let sampleFileURL = URL(fileURLWithPath: "/tmp/config-rule.md")
+
 @Suite("RuleConfigurationLoader")
 struct RuleConfigurationLoaderTests {
     @Test("returns all rules when configuration path is nil")
