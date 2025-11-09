@@ -50,4 +50,42 @@ struct JapanesePolitenessStyleConsistencyRuleTests {
 
         #expect(diagnostics.isEmpty)
     }
+
+    @Test func detectsDesumasuStyleWithTrailingPunctuation() throws {
+        let content = "これはテストでした！  "
+        let document = Document(parsing: content)
+        let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .dearu)
+
+        let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+        #expect(diagnostics.count == 1)
+        let diagnostic = try #require(diagnostics.first)
+        #expect(diagnostic.line == 1)
+        #expect(diagnostic.column == 7)
+        #expect(diagnostic.ruleID == rule.id)
+    }
+
+    @Test func detectsDearuStyleWithTrailingBrackets() throws {
+        let content = "この章は概要である。」\nこの段落は丁寧に説明します。"
+        let document = Document(parsing: content)
+        let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .desumasu)
+
+        let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+        #expect(diagnostics.count == 1)
+        let diagnostic = try #require(diagnostics.first)
+        #expect(diagnostic.line == 1)
+        #expect(diagnostic.column == 7)
+        #expect(diagnostic.ruleID == rule.id)
+    }
+
+    @Test func ignoresSentencesWithoutKnownSuffixes() {
+        let content = "テストする。\nこれは丁寧に説明します。"
+        let document = Document(parsing: content)
+        let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .desumasu)
+
+        let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+        #expect(diagnostics.isEmpty)
+    }
 }
