@@ -15,7 +15,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     env:
       DEVELOPER_DIR: "/Applications/Xcode_26.0.app/Contents/Developer"
     steps:
