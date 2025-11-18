@@ -34,3 +34,4 @@ own tooling.
 - ``JapaneseEllipsisRule``
 - ``JapaneseEnglishSpacingRule``
 - ``JapanesePeriodRule``
+- ``JapanesePolitenessStyleConsistencyRule``
