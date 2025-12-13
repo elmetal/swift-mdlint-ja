@@ -1,6 +1,6 @@
 import Foundation
-import Markdown
 import MDLintCore
+import Markdown
 
 /// A rule that flags zero-width space characters in Markdown documents.
 ///
@@ -9,36 +9,37 @@ import MDLintCore
 /// rendered documents, this rule surfaces diagnostics for each occurrence and
 /// suggests removing the character.
 public struct ZeroWidthSpaceRule: Rule, AutoFixable {
-    public let id = "md.whitespace.no-zero-width-space"
-    public let description = "ゼロ幅スペースを含めないでください。"
+  public let id = "md.whitespace.no-zero-width-space"
+  public let description = "ゼロ幅スペースを含めないでください。"
 
-    private static let zeroWidthSpace: Unicode.Scalar = "\u{200B}"
+  private static let zeroWidthSpace: Unicode.Scalar = "\u{200B}"
 
-    public init() {}
+  public init() {}
 
-    public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
-        var diagnostics: [Diagnostic] = []
-        let lines = originalText.components(separatedBy: "\n")
+  public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
+    var diagnostics: [Diagnostic] = []
+    let lines = originalText.components(separatedBy: "\n")
 
-        for (lineIndex, line) in lines.enumerated() {
-            for (columnOffset, scalar) in line.unicodeScalars.enumerated() where scalar == Self.zeroWidthSpace {
-                let diagnostic = Diagnostic(
-                    file: fileURL,
-                    line: lineIndex + 1,
-                    column: columnOffset + 1,
-                    ruleID: id,
-                    message: "ゼロ幅スペース (U+200B) を削除してください。",
-                    severity: .warning,
-                    fixIt: "ゼロ幅スペースを削除"
-                )
-                diagnostics.append(diagnostic)
-            }
-        }
-
-        return diagnostics
+    for (lineIndex, line) in lines.enumerated() {
+      for (columnOffset, scalar) in line.unicodeScalars.enumerated()
+      where scalar == Self.zeroWidthSpace {
+        let diagnostic = Diagnostic(
+          file: fileURL,
+          line: lineIndex + 1,
+          column: columnOffset + 1,
+          ruleID: id,
+          message: "ゼロ幅スペース (U+200B) を削除してください。",
+          severity: .warning,
+          fixIt: "ゼロ幅スペースを削除"
+        )
+        diagnostics.append(diagnostic)
+      }
     }
 
-    public func fixing(originalText: String) -> String {
-        originalText.replacingOccurrences(of: String(Self.zeroWidthSpace), with: "")
-    }
+    return diagnostics
+  }
+
+  public func fixing(originalText: String) -> String {
+    originalText.replacingOccurrences(of: String(Self.zeroWidthSpace), with: "")
+  }
 }
