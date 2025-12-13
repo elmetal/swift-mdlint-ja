@@ -1,82 +1,87 @@
 import Foundation
-import Markdown
 import MDLintRules
-@testable import MDLintConfig
+import Markdown
 import Testing
+
+@testable import MDLintConfig
 
 private let sampleFileURL = URL(fileURLWithPath: "/tmp/config-rule.md")
 
 @Suite("RuleConfigurationLoader")
 struct RuleConfigurationLoaderTests {
-    @Test("returns all rules when configuration path is nil")
-    func returnsAllRulesWhenConfigurationPathIsNil() throws {
-        let loader = RuleConfigurationLoader()
-        let rules = try loader.loadRules(configurationPath: nil)
+  @Test("returns all rules when configuration path is nil")
+  func returnsAllRulesWhenConfigurationPathIsNil() throws {
+    let loader = RuleConfigurationLoader()
+    let rules = try loader.loadRules(configurationPath: nil)
 
-        #expect(rules.map(\.id).sorted() == DefaultRules.all().map(\.id).sorted())
+    #expect(rules.map(\.id).sorted() == DefaultRules.all().map(\.id).sorted())
+  }
+
+  @Test("loads rules from configuration file")
+  func loadsRulesFromConfigurationFile() throws {
+    let temporaryURL = try makeTemporaryConfigurationFile(contents: [
+      "ja.ellipsis.prefer-double",
+      "ja.period.prefer-fullwidth",
+    ])
+    let loader = RuleConfigurationLoader()
+
+    let rules = try loader.loadRules(configurationPath: temporaryURL.path)
+
+    #expect(
+      rules.map(\.id) == [
+        "ja.ellipsis.prefer-double",
+        "ja.period.prefer-fullwidth",
+      ])
+  }
+
+  @Test("warns about unknown identifiers")
+  func warnsAboutUnknownIdentifiers() throws {
+    let temporaryURL = try makeTemporaryConfigurationFile(contents: [
+      "ja.ellipsis.prefer-double",
+      "unknown.rule",
+    ])
+    var warnedIdentifiers: [String] = []
+    let loader = RuleConfigurationLoader(unknownIdentifierHandler: { identifiers in
+      warnedIdentifiers = identifiers
+    })
+
+    _ = try loader.loadRules(configurationPath: temporaryURL.path)
+
+    #expect(warnedIdentifiers == ["unknown.rule"])
+  }
+
+  @Test("throws when configuration file is missing")
+  func throwsWhenConfigurationFileIsMissing() {
+    let loader = RuleConfigurationLoader(fileManager: .default)
+
+    #expect(throws: RuleConfigurationLoader.Error.fileNotFound("/path/to/missing.json")) {
+      try loader.loadRules(configurationPath: "/path/to/missing.json")
     }
+  }
 
-    @Test("loads rules from configuration file")
-    func loadsRulesFromConfigurationFile() throws {
-        let temporaryURL = try makeTemporaryConfigurationFile(contents: [
-            "ja.ellipsis.prefer-double",
-            "ja.period.prefer-fullwidth"
-        ])
-        let loader = RuleConfigurationLoader()
+  @Test("passes politeness style option to rules")
+  func passesPolitenessStyleOptionToRules() throws {
+    let loader = RuleConfigurationLoader()
+    let rules = try loader.loadRules(
+      configurationPath: nil, options: .init(politenessStyle: .dearu))
 
-        let rules = try loader.loadRules(configurationPath: temporaryURL.path)
+    let politenessRule = try #require(rules.first { $0.id == "ja.style.no-mix-dearu-desumasu" })
+    let content = "これはテストです。"
+    let document = Document(parsing: content)
+    let diagnostics = politenessRule.check(
+      document: document, fileURL: sampleFileURL, originalText: content)
 
-        #expect(rules.map(\.id) == [
-            "ja.ellipsis.prefer-double",
-            "ja.period.prefer-fullwidth"
-        ])
-    }
+    #expect(diagnostics.count == 1)
+  }
 
-    @Test("warns about unknown identifiers")
-    func warnsAboutUnknownIdentifiers() throws {
-        let temporaryURL = try makeTemporaryConfigurationFile(contents: [
-            "ja.ellipsis.prefer-double",
-            "unknown.rule"
-        ])
-        var warnedIdentifiers: [String] = []
-        let loader = RuleConfigurationLoader(unknownIdentifierHandler: { identifiers in
-            warnedIdentifiers = identifiers
-        })
+  private func makeTemporaryConfigurationFile(contents: [String]) throws -> URL {
+    let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(
+      UUID().uuidString)
+    try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
 
-        _ = try loader.loadRules(configurationPath: temporaryURL.path)
-
-        #expect(warnedIdentifiers == ["unknown.rule"])
-    }
-
-    @Test("throws when configuration file is missing")
-    func throwsWhenConfigurationFileIsMissing() {
-        let loader = RuleConfigurationLoader(fileManager: .default)
-
-        #expect(throws: RuleConfigurationLoader.Error.fileNotFound("/path/to/missing.json")) {
-            try loader.loadRules(configurationPath: "/path/to/missing.json")
-        }
-    }
-
-    @Test("passes politeness style option to rules")
-    func passesPolitenessStyleOptionToRules() throws {
-        let loader = RuleConfigurationLoader()
-        let rules = try loader.loadRules(configurationPath: nil, options: .init(politenessStyle: .dearu))
-
-        let politenessRule = try #require(rules.first { $0.id == "ja.style.no-mix-dearu-desumasu" })
-        let content = "これはテストです。"
-        let document = Document(parsing: content)
-        let diagnostics = politenessRule.check(document: document, fileURL: sampleFileURL, originalText: content)
-
-        #expect(diagnostics.count == 1)
-    }
-
-    private func makeTemporaryConfigurationFile(contents: [String]) throws -> URL {
-        let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-
-        let fileURL = directoryURL.appendingPathComponent("config.json")
-        let data = try JSONEncoder().encode(contents)
-        try data.write(to: fileURL)
-        return fileURL
-    }
+    let fileURL = directoryURL.appendingPathComponent("config.json")
+    let data = try JSONEncoder().encode(contents)
+    try data.write(to: fileURL)
+    return fileURL
+  }
 }

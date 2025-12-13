@@ -1,6 +1,6 @@
 import Foundation
-import Markdown
 import MDLintCore
+import Markdown
 
 /// A rule that detects back-to-back Japanese particles that are likely accidental duplicates.
 ///
@@ -9,80 +9,82 @@ import MDLintCore
 /// raises a diagnostic whenever it finds the same particle repeated consecutively, ignoring
 /// whitespace between the repetitions.
 public struct JapaneseParticleDuplicationRule: Rule {
-    public let id = "ja.particle.no-duplicate"
-    public let description = "同じ助詞が続く重複を避けてください。"
+  public let id = "ja.particle.no-duplicate"
+  public let description = "同じ助詞が続く重複を避けてください。"
 
-    private let particles: [String] = [
-        "は", "が", "に", "を", "と", "で", "へ", "から", "まで", "より"
-    ]
+  private let particles: [String] = [
+    "は", "が", "に", "を", "と", "で", "へ", "から", "まで", "より",
+  ]
 
-    public init() {}
+  public init() {}
 
-    public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
-        var diagnostics: [Diagnostic] = []
-        let lines = originalText.components(separatedBy: "\n")
+  public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
+    var diagnostics: [Diagnostic] = []
+    let lines = originalText.components(separatedBy: "\n")
 
-        for (lineNumber, line) in lines.enumerated() {
-            diagnostics.append(contentsOf: diagnosticsForLine(line,
-                                                              lineNumber: lineNumber + 1,
-                                                              fileURL: fileURL))
-        }
-
-        return diagnostics
+    for (lineNumber, line) in lines.enumerated() {
+      diagnostics.append(
+        contentsOf: diagnosticsForLine(
+          line,
+          lineNumber: lineNumber + 1,
+          fileURL: fileURL))
     }
 
-    private func diagnosticsForLine(_ line: String, lineNumber: Int, fileURL: URL) -> [Diagnostic] {
-        var diagnostics: [Diagnostic] = []
+    return diagnostics
+  }
 
-        for particle in particles {
-            var searchRange = line.startIndex..<line.endIndex
+  private func diagnosticsForLine(_ line: String, lineNumber: Int, fileURL: URL) -> [Diagnostic] {
+    var diagnostics: [Diagnostic] = []
 
-            while let foundRange = line.range(of: particle, options: [], range: searchRange) {
-                let nextStart = skipSpaces(in: line, from: foundRange.upperBound)
+    for particle in particles {
+      var searchRange = line.startIndex..<line.endIndex
 
-                if nextStart < line.endIndex, line[nextStart...].hasPrefix(particle) {
-                    let column = line.distance(from: line.startIndex, to: foundRange.lowerBound) + 1
-                    let diagnostic = Diagnostic(
-                        file: fileURL,
-                        line: lineNumber,
-                        column: column,
-                        ruleID: id,
-                        message: "助詞「\(particle)」が連続しています。不要な繰り返しを確認してください。",
-                        severity: .warning,
-                        fixIt: nil
-                    )
-                    diagnostics.append(diagnostic)
-                }
+      while let foundRange = line.range(of: particle, options: [], range: searchRange) {
+        let nextStart = skipSpaces(in: line, from: foundRange.upperBound)
 
-                if nextStart < line.endIndex {
-                    searchRange = nextStart..<line.endIndex
-                } else {
-                    break
-                }
-            }
+        if nextStart < line.endIndex, line[nextStart...].hasPrefix(particle) {
+          let column = line.distance(from: line.startIndex, to: foundRange.lowerBound) + 1
+          let diagnostic = Diagnostic(
+            file: fileURL,
+            line: lineNumber,
+            column: column,
+            ruleID: id,
+            message: "助詞「\(particle)」が連続しています。不要な繰り返しを確認してください。",
+            severity: .warning,
+            fixIt: nil
+          )
+          diagnostics.append(diagnostic)
         }
 
-        return diagnostics
+        if nextStart < line.endIndex {
+          searchRange = nextStart..<line.endIndex
+        } else {
+          break
+        }
+      }
     }
 
-    private func skipSpaces(in line: String, from index: String.Index) -> String.Index {
-        var current = index
-        while current < line.endIndex {
-            let character = line[current]
-            if character.isParticleSpace {
-                current = line.index(after: current)
-            } else {
-                break
-            }
-        }
-        return current
+    return diagnostics
+  }
+
+  private func skipSpaces(in line: String, from index: String.Index) -> String.Index {
+    var current = index
+    while current < line.endIndex {
+      let character = line[current]
+      if character.isParticleSpace {
+        current = line.index(after: current)
+      } else {
+        break
+      }
     }
+    return current
+  }
 }
 
-private extension Character {
-    var isParticleSpace: Bool {
-        return unicodeScalars.allSatisfy { Character.particleSpaces.contains($0) }
-    }
+extension Character {
+  fileprivate var isParticleSpace: Bool {
+    return unicodeScalars.allSatisfy { Character.particleSpaces.contains($0) }
+  }
 
-    private static let particleSpaces = CharacterSet(charactersIn: " \t\u{3000}")
+  private static let particleSpaces = CharacterSet(charactersIn: " \t\u{3000}")
 }

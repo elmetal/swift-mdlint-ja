@@ -2,7 +2,7 @@ name: Swift Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths-ignore:
       - '*.md'
       - '**/*.md'
