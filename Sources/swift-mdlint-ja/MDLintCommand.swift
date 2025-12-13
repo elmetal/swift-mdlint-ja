@@ -64,7 +64,9 @@ struct MDLintCommand: ParsableCommand {
         if allDiagnostics.isEmpty {
             print("✨ No rule violations found.")
         } else {
-            allDiagnostics.sorted(by: Diagnostic.sorter).forEach { print(format($0)) }
+            for diagnostic in allDiagnostics.sorted(by: Diagnostic.sorter) {
+                print(format(diagnostic))
+            }
         }
 
         if strict && !allDiagnostics.isEmpty {
