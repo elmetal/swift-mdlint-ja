@@ -1,0 +1,43 @@
+name: swift-format
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to format"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Run swift-format
+        run: |
+          swift format --in-place --recursive Sources Tests
+
+      - name: Configure git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -am "chore: apply swift-format"
+
+      - name: Push changes
+        if: success()
+        run: |
+          git push origin HEAD:${{ inputs.branch }}
