@@ -7,6 +7,7 @@ on:
       - '*.md'
       - '**/*.md'
       - '.github/workflows/docc-pages.yml'
+      - '.editorconfig'
   pull_request:
     paths-ignore:
       - '*.md'
