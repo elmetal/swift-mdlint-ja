@@ -29,6 +29,20 @@ struct HeadingTerminalPunctuationRuleTests {
     #expect(fixed == "# 見出し\n## 次の見出し\n通常の行")
   }
 
+  @Test func doesNotReportBogusLocationWhenHeadingTextIsNotFoundVerbatim() {
+    // A heading containing emphasis has a plainText ("見出し強調。") that does not
+    // appear verbatim in the source, so the location cannot be determined and the
+    // diagnostic is skipped (previously it was reported at a bogus end-of-document
+    // position).
+    let content = "# 見出し**強調**。\n本文"
+    let document = Document(parsing: content)
+    let rule = HeadingTerminalPunctuationRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
   @Test func ignoresHeadingsWithoutTerminalPunctuation() {
     let content = "# 正しい見出し\n## これも正しい"
     let document = Document(parsing: content)

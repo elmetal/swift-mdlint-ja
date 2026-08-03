@@ -16,30 +16,24 @@ public struct HeadingTerminalPunctuationRule: Rule, AutoFixable {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var out: [Diagnostic] = []
-    let src = originalText as NSString
 
-    for (idx, block) in document.blockChildren.enumerated() {
+    for block in document.blockChildren {
       guard let heading = block as? Heading else { continue }
       let text = heading.plainText
       guard let last = text.trimmingCharacters(in: .whitespacesAndNewlines).last else { continue }
       if ["。", "．", ".", "、", ","].contains(String(last)) {
-        // ラフに位置特定: heading の最初の行番号を推定
-        let search = "#"
         // 近似: ドキュメント先頭から heading のテキストを探す（最初の一致）
-        if let range = src.range(
-          of: text, options: [], range: NSRange(location: 0, length: src.length)) as NSRange?
-        {
-          let (line, col) = lineColumn(in: originalText, utf16Offset: range.location + range.length)
-          let d = Diagnostic(
-            file: fileURL,
-            line: line,
-            column: col,
-            ruleID: id,
-            message: "見出し末尾の句読点「\(last)」を削除してください。",
-            severity: .warning,
-            fixIt: "末尾の句読点を除去")
-          out.append(d)
-        }
+        guard let range = originalText.firstRange(of: text) else { continue }
+        let (line, col) = lineColumn(in: originalText, before: range.upperBound)
+        let d = Diagnostic(
+          file: fileURL,
+          line: line,
+          column: col,
+          ruleID: id,
+          message: "見出し末尾の句読点「\(last)」を削除してください。",
+          severity: .warning,
+          fixIt: "末尾の句読点を除去")
+        out.append(d)
       }
     }
     return out
@@ -64,19 +58,16 @@ public struct HeadingTerminalPunctuationRule: Rule, AutoFixable {
   }
 }
 
-private func lineColumn(in text: String, utf16Offset: Int) -> (Int, Int) {
+private func lineColumn(in text: String, before index: String.Index) -> (Int, Int) {
   var line = 1
   var col = 1
-  var count = 0
-  for ch in text {
-    if count >= utf16Offset { break }
+  for ch in text[..<index] {
     if ch == "\n" {
       line += 1
       col = 1
     } else {
       col += 1
     }
-    count += String(ch).utf16.count
   }
   return (line, col)
 }
