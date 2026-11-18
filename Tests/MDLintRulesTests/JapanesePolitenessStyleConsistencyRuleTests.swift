@@ -101,4 +101,14 @@ struct JapanesePolitenessStyleConsistencyRuleTests {
     #expect(diagnostics.count == 1)
     #expect(diagnostic.line == 3)
   }
+
+  @Test func ignoresTildeFencedAndIndentedCodeBlocks() {
+    let content = "これはテストです。\n\n~~~\nこれは報告である。\n~~~\n\n    これも報告である。\n"
+    let document = Document(parsing: content)
+    let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .desumasu)
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
 }

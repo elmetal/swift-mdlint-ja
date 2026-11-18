@@ -4,7 +4,7 @@ import Markdown
 
 /// A rule that ensures consistent use of politeness styles (ですます調 / である調) in Japanese text.
 ///
-/// The rule scans Markdown lines outside of fenced code blocks, detects whether each sentence
+/// The rule scans Markdown lines outside of code blocks, detects whether each sentence
 /// ends in the polite "ですます" style or the plain "である" style, and raises diagnostics when
 /// sentences using the minority style are found. The preferred style can be supplied via
 /// ``PreferredStyle``; when set to ``PreferredStyle/auto`` the majority style in the document is used.
@@ -36,7 +36,8 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
   }
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
-    let sentences = collectSentences(from: originalText)
+    let sentences = collectSentences(
+      from: originalText, skipping: document.codeBlockLineNumbers)
 
     guard !sentences.isEmpty else { return [] }
 
@@ -96,20 +97,12 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
     }
   }
 
-  private func collectSentences(from text: String) -> [Sentence] {
+  private func collectSentences(from text: String, skipping codeLines: Set<Int>) -> [Sentence] {
     var sentences: [Sentence] = []
-    var inCodeBlock = false
 
     for (index, line) in text.sourceLines.enumerated() {
       let lineNumber = index + 1
-      let trimmedLeading = line.trimmingCharacters(in: .whitespaces)
-
-      if trimmedLeading.hasPrefix("```") {
-        inCodeBlock.toggle()
-        continue
-      }
-
-      if inCodeBlock { continue }
+      if codeLines.contains(lineNumber) { continue }
 
       guard let detection = detectStyle(in: line) else { continue }
 

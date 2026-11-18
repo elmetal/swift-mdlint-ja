@@ -29,4 +29,14 @@ struct HalfwidthKanaRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func ignoresCodeBlocks() {
+    let content = "本文\n\n```\nﾛｸﾞ出力\n```\n"
+    let document = Document(parsing: content)
+    let rule = HalfwidthKanaRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
 }

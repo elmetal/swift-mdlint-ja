@@ -16,17 +16,10 @@ public struct InlineBacktickClosureRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    var inFencedCodeBlock = false
+    let codeLines = document.codeBlockLineNumbers
 
-    for (index, line) in originalText.sourceLines.enumerated() {
-      let trimmed = line.trimmingCharacters(in: .whitespaces)
-      if trimmed.hasPrefix("```") {
-        inFencedCodeBlock.toggle()
-        continue
-      }
-
-      if inFencedCodeBlock { continue }
-
+    for (index, line) in originalText.sourceLines.enumerated()
+    where !codeLines.contains(index + 1) {
       if let unmatched = Self.firstUnmatchedBacktickRun(in: line) {
         let diagnostic = Diagnostic(
           file: fileURL,

@@ -9,6 +9,10 @@ matching a subset of identifiers. Import this module when you need to reference 
 individual rules directly or when you want to embed the default configuration in your
 own tooling.
 
+Rules that check Japanese prose (identifiers starting with `ja.`) skip fenced and
+indented code blocks, both when reporting and when fixing. The `md.` rules that look
+for invisible characters still apply everywhere.
+
 ## Topics
 
 ### Rule Collections

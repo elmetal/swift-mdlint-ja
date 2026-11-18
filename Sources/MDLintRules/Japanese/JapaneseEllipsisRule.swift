@@ -5,9 +5,9 @@ import Markdown
 /// A rule that enforces even-length ellipsis characters in Japanese text.
 ///
 /// Japanese typography prefers ellipses rendered as paired "…" characters.
-/// This rule walks each line of Markdown source, searching for runs of odd
-/// length and recommending an autofix that inserts an additional ellipsis to
-/// reach the closest even count.
+/// This rule walks each line of Markdown source outside of code blocks,
+/// searching for runs of odd length and recommending an autofix that inserts an
+/// additional ellipsis to reach the closest even count.
 public struct JapaneseEllipsisRule: Rule, AutoFixable {
   public let id = "ja.ellipsis.prefer-double"
   public let description = "3点リーダーは「……」に統一してください。"
@@ -16,10 +16,11 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let lines = originalText.components(separatedBy: "\n")
+    let codeLines = document.codeBlockLineNumbers
     let ellipsis: Character = "…"
 
-    for (lineNumber, line) in lines.enumerated() {
+    for (lineNumber, line) in originalText.sourceLines.enumerated()
+    where !codeLines.contains(lineNumber + 1) {
       var index = line.startIndex
       while index != line.endIndex {
         if line[index] == ellipsis {
@@ -58,10 +59,9 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
 
   public func fixing(originalText: String) -> String {
     let ellipsis: Character = "…"
-    var lines = originalText.components(separatedBy: "\n")
+    let codeLines = Document(parsing: originalText).codeBlockLineNumbers
 
-    for lineIndex in lines.indices {
-      let line = lines[lineIndex]
+    return originalText.mappingSourceLines(skipping: codeLines) { line in
       var newLine = ""
       var index = line.startIndex
 
@@ -83,9 +83,7 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
         }
       }
 
-      lines[lineIndex] = newLine
+      return newLine
     }
-
-    return lines.joined(separator: "\n")
   }
 }

@@ -5,9 +5,9 @@ import Markdown
 /// A rule that detects back-to-back Japanese particles that are likely accidental duplicates.
 ///
 /// Many typographical mistakes stem from repeating the same particle (for example "にに" or
-/// "をを") when editing text. This rule scans the original Markdown source line by line and
-/// raises a diagnostic whenever it finds the same particle repeated consecutively, ignoring
-/// whitespace between the repetitions.
+/// "をを") when editing text. This rule scans the original Markdown source line by line,
+/// skipping code blocks, and raises a diagnostic whenever it finds the same particle repeated
+/// consecutively, ignoring whitespace between the repetitions.
 public struct JapaneseParticleDuplicationRule: Rule {
   public let id = "ja.particle.no-duplicate"
   public let description = "同じ助詞が続く重複を避けてください。"
@@ -20,12 +20,13 @@ public struct JapaneseParticleDuplicationRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let lines = originalText.components(separatedBy: "\n")
+    let codeLines = document.codeBlockLineNumbers
 
-    for (lineNumber, line) in lines.enumerated() {
+    for (lineNumber, line) in originalText.sourceLines.enumerated()
+    where !codeLines.contains(lineNumber + 1) {
       diagnostics.append(
         contentsOf: diagnosticsForLine(
-          line,
+          String(line),
           lineNumber: lineNumber + 1,
           fileURL: fileURL))
     }

@@ -66,4 +66,16 @@ struct JapaneseCommaLimitRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func doesNotCountCommasInsideOrAcrossCodeBlocks() {
+    // The commas inside the code block are ignored, and the block separates the
+    // text before it from the text after it even without blank lines.
+    let content = "これは、テストで、\n```\n一、二、三、四、五\n```\n例で、確認です"
+    let document = Document(parsing: content)
+    let rule = JapaneseCommaLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
 }

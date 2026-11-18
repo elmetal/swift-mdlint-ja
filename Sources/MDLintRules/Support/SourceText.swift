@@ -21,15 +21,30 @@ extension String {
 
   /// Returns the text with `transform` applied to every line, keeping each
   /// original line terminator untouched.
-  func mappingSourceLines(_ transform: (Substring) -> String) -> String {
+  ///
+  /// Lines whose 1-based number is in `skippedLineNumbers` are copied verbatim.
+  func mappingSourceLines(
+    skipping skippedLineNumbers: Set<Int> = [], _ transform: (Substring) -> String
+  ) -> String {
     var result = ""
     var lineStart = startIndex
+    var lineNumber = 1
+
+    func appendLine(_ line: Substring) {
+      if skippedLineNumbers.contains(lineNumber) {
+        result += line
+      } else {
+        result += transform(line)
+      }
+    }
+
     for index in indices where self[index].isLineTerminator {
-      result += transform(self[lineStart..<index])
+      appendLine(self[lineStart..<index])
       result.append(self[index])
       lineStart = self.index(after: index)
+      lineNumber += 1
     }
-    result += transform(self[lineStart...])
+    appendLine(self[lineStart...])
     return result
   }
 

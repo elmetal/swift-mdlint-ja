@@ -58,4 +58,14 @@ struct InlineBacktickClosureRuleTests {
     #expect(diagnostics.count == 1)
     #expect(diagnostic.column == 5)
   }
+
+  @Test func ignoresTildeFencedAndIndentedCodeBlocks() {
+    let content = "本文\n\n~~~\nlet s = `unclosed\n~~~\n\n    echo `date\n"
+    let document = Document(parsing: content)
+    let rule = InlineBacktickClosureRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
 }

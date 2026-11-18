@@ -59,4 +59,17 @@ struct JapanesePeriodRuleTests {
     #expect(diagnostics.map(\.line) == [1])
     #expect(rule.fixing(originalText: content) == "一行目。\r\n二行目。\r\n")
   }
+
+  @Test func leavesCodeBlocksAlone() {
+    let content = "本文です.\n\n```bash\n# Install the tool.\n```\n\n    indented code.\n"
+    let document = Document(parsing: content)
+    let rule = JapanesePeriodRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.line) == [1])
+    #expect(
+      rule.fixing(originalText: content)
+        == "本文です。\n\n```bash\n# Install the tool.\n```\n\n    indented code.\n")
+  }
 }

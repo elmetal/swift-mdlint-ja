@@ -33,7 +33,8 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let sentenceRanges = self.sentenceRanges(in: originalText)
+    let sentenceRanges = self.sentenceRanges(
+      in: originalText, skipping: document.codeBlockLineNumbers)
     var lastConjunction: ConjunctionOccurrence?
 
     for range in sentenceRanges {
@@ -61,29 +62,49 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
     return diagnostics
   }
 
-  private func sentenceRanges(in text: String) -> [Range<String.Index>] {
+  /// Splits the text into sentences, leaving out the lines of code blocks.
+  ///
+  /// A code block also ends the sentence that precedes it.
+  private func sentenceRanges(in text: String, skipping codeLines: Set<Int>)
+    -> [Range<String.Index>]
+  {
     var ranges: [Range<String.Index>] = []
     var start = text.startIndex
     var index = start
+    var line = 1
+    var inCodeBlock = codeLines.contains(line)
+
+    func endSentence(at end: String.Index) {
+      let range = start..<end
+      if !range.isEmpty, containsContent(in: text, range: range) {
+        ranges.append(range)
+      }
+    }
 
     while index < text.endIndex {
       let character = text[index]
-      if sentenceTerminators.contains(character) {
-        let nextIndex = text.index(after: index)
-        let range = start..<nextIndex
-        if containsContent(in: text, range: range) {
-          ranges.append(range)
+      let nextIndex = text.index(after: index)
+
+      if character.isLineTerminator {
+        line += 1
+        let nextLineIsCode = codeLines.contains(line)
+        if inCodeBlock {
+          start = nextIndex
+        } else if nextLineIsCode {
+          endSentence(at: index)
+          start = nextIndex
         }
+        inCodeBlock = nextLineIsCode
+      } else if !inCodeBlock, sentenceTerminators.contains(character) {
+        endSentence(at: nextIndex)
         start = nextIndex
       }
-      index = text.index(after: index)
+
+      index = nextIndex
     }
 
-    if start < text.endIndex {
-      let range = start..<text.endIndex
-      if containsContent(in: text, range: range) {
-        ranges.append(range)
-      }
+    if !inCodeBlock {
+      endSentence(at: text.endIndex)
     }
 
     return ranges

@@ -5,9 +5,9 @@ import Markdown
 /// A rule that removes superfluous spaces between Japanese and Latin text.
 ///
 /// Full-width Japanese characters and adjacent ASCII words should appear
-/// without separating spaces. The rule searches each line for whitespace that
-/// divides Japanese and English segments and produces diagnostics with autofix
-/// replacements that collapse the gap.
+/// without separating spaces. The rule searches each line outside of code
+/// blocks for whitespace that divides Japanese and English segments and
+/// produces diagnostics with autofix replacements that collapse the gap.
 public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
   public let id = "ja.spacing.no-space-between-japanese-and-english"
   public let description = "和文と英単語の間にスペースは入れないでください。"
@@ -16,10 +16,11 @@ public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let lines = originalText.components(separatedBy: "\n")
+    let codeLines = document.codeBlockLineNumbers
     let regexes = [Self.japaneseBeforeEnglishRegex, Self.englishBeforeJapaneseRegex]
 
-    for (index, line) in lines.enumerated() {
+    for (index, line) in originalText.sourceLines.enumerated()
+    where !codeLines.contains(index + 1) {
       diagnostics.append(
         contentsOf: diagnosticsForLine(
           line, lineNumber: index + 1, fileURL: fileURL, regexes: regexes))
@@ -29,14 +30,18 @@ public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
   }
 
   public func fixing(originalText: String) -> String {
-    var fixed = originalText
-    fixed = Self.removingSpaces(matchedBy: Self.japaneseBeforeEnglishRegex, in: fixed)
-    fixed = Self.removingSpaces(matchedBy: Self.englishBeforeJapaneseRegex, in: fixed)
-    return fixed
+    let codeLines = Document(parsing: originalText).codeBlockLineNumbers
+    let regexes = [Self.japaneseBeforeEnglishRegex, Self.englishBeforeJapaneseRegex]
+
+    return originalText.mappingSourceLines(skipping: codeLines) { line in
+      regexes.reduce(String(line)) { fixed, regex in
+        Self.removingSpaces(matchedBy: regex, in: fixed)
+      }
+    }
   }
 
   private func diagnosticsForLine(
-    _ line: String, lineNumber: Int, fileURL: URL, regexes: [SpacingRegex]
+    _ line: Substring, lineNumber: Int, fileURL: URL, regexes: [SpacingRegex]
   ) -> [Diagnostic] {
     var result: [Diagnostic] = []
 

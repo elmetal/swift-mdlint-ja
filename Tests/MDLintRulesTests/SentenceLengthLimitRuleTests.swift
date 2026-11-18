@@ -85,4 +85,29 @@ struct SentenceLengthLimitRuleTests {
     #expect(diagnostic.line == 3)
     #expect(diagnostic.column == 101)
   }
+
+  @Test func doesNotCountCharactersInsideOrAcrossCodeBlocks() {
+    let prose = String(repeating: "あ", count: 60)
+    let code = String(repeating: "x", count: 200)
+    let content = prose + "\n```\n" + code + "\n```\n" + prose
+    let document = Document(parsing: content)
+    let rule = SentenceLengthLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
+  @Test func reportsCorrectLocationAfterCodeBlock() throws {
+    let content = "```\ncode\n```\n" + String(repeating: "あ", count: 101) + "。"
+    let document = Document(parsing: content)
+    let rule = SentenceLengthLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostics.count == 1)
+    #expect(diagnostic.line == 4)
+    #expect(diagnostic.column == 101)
+  }
 }
