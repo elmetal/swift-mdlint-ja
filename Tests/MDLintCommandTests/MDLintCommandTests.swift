@@ -50,7 +50,7 @@ private func makeTree(_ files: [String: String]) throws -> URL {
 struct MDLintCommandTests {
   @Test("lints a file once when several arguments reach it")
   func lintsFileOnceWhenReachableThroughSeveralArguments() throws {
-    let root = try makeTree(["sub/s.md": "これはテストです...\n"])
+    let root = try makeTree(["sub/s.md": "これはテストです.\n"])
     defer { try? FileManager.default.removeItem(at: root) }
 
     let once = try runMDLint(["sub/s.md"], in: root)
@@ -65,7 +65,7 @@ struct MDLintCommandTests {
 
   @Test("warns about a path that does not exist and lints the rest")
   func warnsAboutMissingPath() throws {
-    let root = try makeTree(["a.md": "これはテストです...\n"])
+    let root = try makeTree(["a.md": "これはテストです.\n"])
     defer { try? FileManager.default.removeItem(at: root) }
 
     let baseline = try runMDLint(["a.md"], in: root)
@@ -79,7 +79,7 @@ struct MDLintCommandTests {
 
   @Test("warns about a file that is not valid UTF-8 and lints the rest")
   func warnsAboutNonUTF8File() throws {
-    let root = try makeTree(["a.md": "これはテストです...\n"])
+    let root = try makeTree(["a.md": "これはテストです.\n"])
     defer { try? FileManager.default.removeItem(at: root) }
 
     let baseline = try runMDLint(["."], in: root)
@@ -100,7 +100,7 @@ struct MDLintCommandTests {
 
   @Test("rewrites a file only when --fix is given")
   func rewritesFileOnlyWithFix() throws {
-    let original = "これはテストです...\n"
+    let original = "これはテストです.\n"
     let root = try makeTree(["a.md": original])
     defer { try? FileManager.default.removeItem(at: root) }
     let file = root.appendingPathComponent("a.md")
@@ -117,7 +117,7 @@ struct MDLintCommandTests {
   // The superuser can write into a read-only directory, so the failure cannot be provoked.
   @Test("warns when fixes cannot be written back", .enabled(if: getuid() != 0))
   func warnsWhenFixesCannotBeWritten() throws {
-    let original = "これはテストです...\n"
+    let original = "これはテストです.\n"
     let root = try makeTree(["locked/a.md": original])
     let directory = root.appendingPathComponent("locked")
     let file = directory.appendingPathComponent("a.md")
@@ -146,7 +146,7 @@ struct MDLintCommandTests {
     "prints plain text diagnostics by default and for --format text",
     arguments: [[], ["--format", "text"], ["--format", "TEXT"]])
   func printsTextDiagnostics(formatArguments: [String]) throws {
-    let root = try makeTree(["s.md": "これはテストです...\n"])
+    let root = try makeTree(["s.md": "これはテストです.\n"])
     defer { try? FileManager.default.removeItem(at: root) }
 
     let result = try runMDLint(formatArguments + ["s.md"], in: root)
@@ -161,7 +161,7 @@ struct MDLintCommandTests {
     "prints workflow commands for --format gha, whatever the case",
     arguments: ["gha", "GHA", "Gha"])
   func printsWorkflowCommands(format: String) throws {
-    let root = try makeTree(["s.md": "これはテストです...\n"])
+    let root = try makeTree(["s.md": "これはテストです.\n"])
     defer { try? FileManager.default.removeItem(at: root) }
 
     let result = try runMDLint(["--format", format, "s.md"], in: root)
@@ -174,7 +174,7 @@ struct MDLintCommandTests {
 
   @Test("rejects an unknown --format value with a usage error")
   func rejectsUnknownFormat() throws {
-    let root = try makeTree(["s.md": "これはテストです...\n"])
+    let root = try makeTree(["s.md": "これはテストです.\n"])
     defer { try? FileManager.default.removeItem(at: root) }
 
     let result = try runMDLint(["--format", "json", "s.md"], in: root)

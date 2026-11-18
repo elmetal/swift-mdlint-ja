@@ -84,4 +84,55 @@ struct JapanesePeriodRuleTests {
     #expect(diagnostics.map(\.line) == [2])
     #expect(rule.fixing(originalText: content) == "パスは `a.\nb` です。\n")
   }
+
+  @Test(arguments: [
+    "See the README for details.",
+    "1.",
+    "１．",
+    "- Install the tool.",
+    "Run `mdlint-ja --fix`.",
+    "日本語の文です。This one is English.",
+    "これは日本語です! Not this one.",
+    "東京は Tokyo. This is English.",
+    "etc.",
+  ])
+  func leavesLinesThatDoNotEndAJapaneseSentenceAlone(content: String) {
+    let document = Document(parsing: content)
+    let rule = JapanesePeriodRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+    #expect(rule.fixing(originalText: content) == content)
+  }
+
+  @Test(arguments: [
+    ("これは Swift.", "これは Swift。"),
+    ("1. これは項目です.", "1. これは項目です。"),
+    ("Swift 6.0 に対応しました.", "Swift 6.0 に対応しました。"),
+    ("詳細は example.com を参照.", "詳細は example.com を参照。"),
+    ("English first. 次は日本語です.", "English first. 次は日本語です。"),
+    ("カタカナ.", "カタカナ。"),
+    ("「引用」.", "「引用」。"),
+  ])
+  func fixesPeriodsThatEndAJapaneseSentence(content: String, expected: String) {
+    let document = Document(parsing: content)
+    let rule = JapanesePeriodRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.count == 1)
+    #expect(rule.fixing(originalText: content) == expected)
+  }
+
+  @Test(arguments: ["そうですね...", "そうですね．．．", "つづく.."])
+  func leavesEllipsesMadeOfPeriodsAlone(content: String) {
+    let document = Document(parsing: content)
+    let rule = JapanesePeriodRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+    #expect(rule.fixing(originalText: content) == content)
+  }
 }
