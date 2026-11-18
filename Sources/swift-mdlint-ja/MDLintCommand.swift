@@ -56,6 +56,10 @@ struct MDLintCommand: ParsableCommand {
         options: .init(politenessStyle: politenessStyle))
     } catch RuleConfigurationLoader.Error.fileNotFound(let path) {
       throw ValidationError("Configuration file not found at \(path)")
+    } catch is DecodingError {
+      throw ValidationError(
+        "Configuration file at \(configurationPath ?? "") must be a JSON array of rule identifier strings"
+      )
     }
 
     let linter = Linter(rules: rules)
