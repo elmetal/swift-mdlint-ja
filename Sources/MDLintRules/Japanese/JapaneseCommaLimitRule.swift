@@ -12,7 +12,10 @@ public struct JapaneseCommaLimitRule: Rule {
   public let description = "一文に含める読点は3つまでにしてください。"
 
   private let commaCharacter: Character = "、"
-  private let sentenceTerminators: Set<Character> = ["。", "！", "？", "!", "?", "．"]
+  // A masked code or HTML block also ends the sentence that precedes it.
+  private let sentenceTerminators: Set<Character> = [
+    "。", "！", "？", "!", "?", "．", MaskedSource.blockPlaceholder,
+  ]
   private let maxCommaCount = 3
 
   public init() {}

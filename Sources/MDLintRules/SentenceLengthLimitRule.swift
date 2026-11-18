@@ -71,7 +71,11 @@ public struct SentenceLengthLimitRule: Rule {
         isInURL = false
       }
 
-      if !isInURL {
+      // A masked code or HTML block is not part of any sentence: it ends the
+      // sentence that precedes it and is not counted itself.
+      let isMaskedBlock = character == MaskedSource.blockPlaceholder
+
+      if !isInURL && !isMaskedBlock {
         currentLength += 1
         if currentLength == maxLength + 1 {
           exceeded = true
@@ -80,7 +84,7 @@ public struct SentenceLengthLimitRule: Rule {
         }
       }
 
-      if sentenceTerminators.contains(character) {
+      if isMaskedBlock || sentenceTerminators.contains(character) {
         emitDiagnosticIfNeeded(currentSentenceLength: currentLength)
         currentLength = 0
         exceeded = false
