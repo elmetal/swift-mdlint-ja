@@ -90,6 +90,45 @@ struct JapanesePolitenessStyleConsistencyRuleTests {
     #expect(diagnostics.isEmpty)
   }
 
+  @Test func classifiesEverySentenceOnALine() throws {
+    let content = "これは事実である。しかし説明します。結論は明らかだ。"
+    let document = Document(parsing: content)
+    let rule = JapanesePolitenessStyleConsistencyRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    // Two plain sentences and one polite sentence: the polite one is the minority.
+    #expect(diagnostics.count == 1)
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostic.line == 1)
+    #expect(diagnostic.column == 16)
+    #expect(diagnostic.message.contains("この文は敬体"))
+  }
+
+  @Test func reportsEveryMismatchedSentenceOnALine() {
+    let content = "これはテストです。これは事実である！別の文だ？最後は丁寧に説明します"
+    let document = Document(parsing: content)
+    let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .desumasu)
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.column) == [15, 22])
+  }
+
+  @Test(arguments: [
+    "彼は「行きます。」と言った。結論は明らかだ。",
+    "注記（これは補足です。）を付けた。結論は明らかだ。",
+    "『急ぎましょう！』と叫んだ。結論は明らかだ。",
+  ])
+  func doesNotClassifyQuotedSentencesOnTheirOwn(content: String) {
+    let document = Document(parsing: content)
+    let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .dearu)
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
   @Test func handlesWindowsLineEndings() throws {
     let content = "これはテストです。\r\nこの文も丁寧語です。\r\nこれは事実である。\r\n"
     let document = Document(parsing: content)

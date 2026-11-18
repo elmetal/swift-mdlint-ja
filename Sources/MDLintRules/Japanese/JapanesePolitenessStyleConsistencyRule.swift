@@ -109,13 +109,50 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
       let lineNumber = index + 1
       if codeLines.contains(lineNumber) { continue }
 
-      guard let detection = detectStyle(in: line, inlineCode: inlineCode) else { continue }
+      // A line can hold several sentences, and each one has a style of its own.
+      for sentence in Self.sentences(in: line) {
+        guard let detection = detectStyle(in: sentence, inlineCode: inlineCode) else { continue }
 
-      sentences.append(Sentence(style: detection.style, line: lineNumber, column: detection.column))
+        let offset = line.distance(from: line.startIndex, to: sentence.startIndex)
+        sentences.append(
+          Sentence(style: detection.style, line: lineNumber, column: detection.column + offset))
+      }
     }
 
     return sentences
   }
+
+  /// Splits a line into its sentences, each ending just after its terminator.
+  ///
+  /// A terminator inside brackets or quotation marks does not end the sentence, so the quoted
+  /// speech in "「行きます。」と言った。" is not classified on its own. The last sentence runs to
+  /// the end of the line whether or not it has a terminator.
+  private static func sentences(in line: Substring) -> [Substring] {
+    var sentences: [Substring] = []
+    var start = line.startIndex
+    var depth = 0
+
+    for index in line.indices {
+      let character = line[index]
+      if openingBrackets.contains(character) {
+        depth += 1
+      } else if closingBrackets.contains(character) {
+        depth = max(depth - 1, 0)
+      } else if depth == 0, sentenceTerminators.contains(character) {
+        let end = line.index(after: index)
+        sentences.append(line[start..<end])
+        start = end
+      }
+    }
+    if start < line.endIndex {
+      sentences.append(line[start...])
+    }
+    return sentences
+  }
+
+  private static let sentenceTerminators: Set<Character> = ["。", "．", "！", "？", "!", "?"]
+  private static let openingBrackets: Set<Character> = ["「", "『", "（", "("]
+  private static let closingBrackets: Set<Character> = ["」", "』", "）", ")"]
 
   private func detectStyle(in line: Substring, inlineCode: InlineCodeRanges)
     -> (style: DetectedStyle, column: Int)?
