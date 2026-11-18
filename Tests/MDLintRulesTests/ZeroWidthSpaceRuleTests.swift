@@ -49,4 +49,26 @@ struct ZeroWidthSpaceRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func countsColumnsInCharacters() {
+    // The family emoji is one character made of five scalars.
+    let content = "👨\u{200D}👩\u{200D}👧\u{200B}後\u{200B}"
+    let document = Document(parsing: content)
+    let rule = ZeroWidthSpaceRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.column) == [2, 4])
+  }
+
+  @Test func reportsCorrectLineWithLoneCarriageReturns() {
+    let content = "一行目\r二行目\u{200B}\r三行目"
+    let document = Document(parsing: content)
+    let rule = ZeroWidthSpaceRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.line) == [2])
+    #expect(diagnostics.map(\.column) == [4])
+  }
 }
