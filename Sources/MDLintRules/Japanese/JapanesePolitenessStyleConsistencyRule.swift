@@ -159,7 +159,7 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
 
   private static let trailingCharacters: Set<Character> = [
     "。", "．", ".", "!", "！", "?", "？", "〜", "～", "♪", "…",
-    "\"", "'", "」", "』", "〕", "］", "）", "〉", "》", "】", ">", "》", "、",
+    "\"", "'", "」", "』", "〕", "］", "）", "〉", "》", "】", ">", "、",
     "*", "_", "`",
   ]
 
