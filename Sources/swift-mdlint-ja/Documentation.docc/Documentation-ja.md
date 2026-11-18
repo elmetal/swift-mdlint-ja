@@ -29,6 +29,7 @@ mdlint-ja Articles
 - `--format <text|gha>`: 出力フォーマットを指定します。`gha` を選ぶと GitHub Actions 形式になります。
 - `--strict`: 違反が検出された場合に終了コード `2` で終了します。
 - `--config <path>`: 有効化するルール識別子を列挙した JSON ファイルを読み込みます。
+- `--politeness-style <auto|desumasu|dearu>`: 敬体・常体の混在チェックで揃える文体を指定します（`auto` は文書内で多い方に合わせます）。
 
 ## 設定
 
@@ -43,12 +44,16 @@ mdlint-ja Articles
 
 ## 出力
 
-違反はファイルパス、行番号、ルール識別子を含むメッセージとして出力されます。`--format gha` を使用すると GitHub Actions の注釈にそのまま貼り付けられる形式になります。`--fix` を併用した場合は、修正が成功したファイルがその場で更新されます。
+違反はファイルパスと行番号を含むメッセージとして出力され、`text` 形式ではルール識別子も表示されます。`--format gha` を使用すると GitHub Actions のワークフローコマンド形式になり、違反が注釈として表示されます。`--fix` を併用した場合は、修正が成功したファイルがその場で更新されます。
 
 ## Topics
 
 ### English version
 - <doc:Documentation>
+
+### ツールの仕組み
+
+- <doc:HowItWorks>
 
 ### コマンドオプション
 

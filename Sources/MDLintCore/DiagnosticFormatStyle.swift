@@ -4,9 +4,8 @@ import Foundation
 ///
 /// Conform to ``DiagnosticFormatStyle`` to customize how diagnostics appear in
 /// user interfaces, command-line output, or continuous integration logs. Each
-/// conforming type specifies a ``FormatStyle/FormatOutput`` that best suits its
-/// destination and implements ``FormatStyle/format(_:)`` to render the
-/// diagnostic.
+/// conforming type specifies a `FormatOutput` that best suits its destination
+/// and implements `format(_:)` to render the diagnostic.
 ///
 /// The Markdown linter provides built-in styles such as ``TextDiagnosticFormatStyle``
 /// for human-readable output and ``GHADiagnosticFormatStyle`` for GitHub Actions

@@ -26,9 +26,9 @@ public struct Linter {
   ///   - fileURL: The URL used in diagnostics to identify the document.
   ///   - applyFixes: A Boolean value that indicates whether auto-fixable rules
   ///     should mutate the Markdown text.
-  /// - Returns: A tuple that contains the collected diagnostics and, when
-  ///   ``applyFixes`` is `true`, the fixed Markdown string. The second element
-  ///   is `nil` when no fixes are applied.
+  /// - Returns: A tuple that contains the diagnostics collected from the
+  ///   original `content` and, when `applyFixes` is `true`, the fixed Markdown
+  ///   string. The second element is `nil` when `applyFixes` is `false`.
   public func lint(content: String, fileURL: URL, applyFixes: Bool) -> ([Diagnostic], String?) {
     let document = Document(parsing: content)
     var diagnostics: [Diagnostic] = []

@@ -41,13 +41,13 @@ public struct Diagnostic: Codable, Hashable {
     self.fixIt = fixIt
   }
 
-  /// Returns a deterministic ordering closure that sorts diagnostics by file path,
+  /// A deterministic ordering predicate that sorts diagnostics by file path,
   /// then by line, column, and rule identifier.
   ///
   /// - Parameters:
   ///   - lhs: The left-hand side diagnostic to compare.
   ///   - rhs: The right-hand side diagnostic to compare.
-  /// - Returns: `true` if ``lhs`` should appear before ``rhs`` in a sorted sequence.
+  /// - Returns: `true` if `lhs` should appear before `rhs` in a sorted sequence.
   public static func sorter(lhs: Diagnostic, rhs: Diagnostic) -> Bool {
     if lhs.file.path != rhs.file.path { return lhs.file.path < rhs.file.path }
     if lhs.line != rhs.line { return lhs.line < rhs.line }

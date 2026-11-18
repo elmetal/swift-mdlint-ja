@@ -33,7 +33,7 @@ When no paths are provided the linter scans the current directory recursively fo
 
 ### Configuration file
 
-The configuration file is a JSON array containing rule identifier strings. Unknown identifiers are ignored.
+The configuration file is a JSON array containing rule identifier strings. Unknown identifiers are ignored after a warning is printed to standard error.
 
 ```json
 [
