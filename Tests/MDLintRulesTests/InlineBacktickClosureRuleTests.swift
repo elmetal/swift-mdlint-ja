@@ -34,4 +34,48 @@ struct InlineBacktickClosureRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func matchesBacktickRunsByLength() {
+    // A double-backtick span may contain a single backtick, and an escaped
+    // backtick is plain text.
+    let content = "`` a ` b `` は有効です\nこれは \\` ただの文字です"
+    let document = Document(parsing: content)
+    let rule = InlineBacktickClosureRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
+  @Test func reportsRunWithoutCloserOfSameLength() throws {
+    let content = "これは ``コード` です"
+    let document = Document(parsing: content)
+    let rule = InlineBacktickClosureRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostics.count == 1)
+    #expect(diagnostic.column == 5)
+  }
+
+  @Test func ignoresTildeFencedAndIndentedCodeBlocks() {
+    let content = "本文\n\n~~~\nlet s = `unclosed\n~~~\n\n    echo `date\n"
+    let document = Document(parsing: content)
+    let rule = InlineBacktickClosureRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
+  @Test func acceptsCodeSpansThatContinueOnTheNextLine() {
+    let content = "これは `複数行の\nコード` です"
+    let document = Document(parsing: content)
+    let rule = InlineBacktickClosureRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
 }

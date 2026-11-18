@@ -28,4 +28,24 @@ struct JapaneseParticleDuplicationRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func ignoresCodeBlocks() {
+    let content = "本文\n\n~~~\nサンプルにになります\n~~~\n"
+    let document = Document(parsing: content)
+    let rule = JapaneseParticleDuplicationRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
+  @Test func ignoresInlineCode() {
+    let content = "引数に `にに` を渡します。"
+    let document = Document(parsing: content)
+    let rule = JapaneseParticleDuplicationRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
 }

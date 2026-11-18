@@ -44,4 +44,35 @@ struct JapaneseEnglishSpacingRuleTests {
 
     #expect(fixed == content)
   }
+
+  @Test func leavesCodeBlocksAlone() {
+    let content = "これは Test です\n\n```bash\necho \"これは Test です\"\n```\n"
+    let document = Document(parsing: content)
+    let rule = JapaneseEnglishSpacingRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.line) == [1, 1])
+    #expect(
+      rule.fixing(originalText: content)
+        == "これはTestです\n\n```bash\necho \"これは Test です\"\n```\n")
+  }
+
+  @Test func fixKeepsWindowsLineEndings() {
+    let content = "これは Test です\r\nSwift を使う\r\n"
+    let rule = JapaneseEnglishSpacingRule()
+
+    #expect(rule.fixing(originalText: content) == "これはTestです\r\nSwiftを使う\r\n")
+  }
+
+  @Test func leavesInlineCodeAlone() {
+    let content = "これは Test と `これは Test です` です"
+    let document = Document(parsing: content)
+    let rule = JapaneseEnglishSpacingRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.column) == [4, 9])
+    #expect(rule.fixing(originalText: content) == "これはTestと `これは Test です` です")
+  }
 }

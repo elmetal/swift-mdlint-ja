@@ -5,9 +5,10 @@ import Markdown
 /// A rule that standardizes sentence-ending punctuation to "。".
 ///
 /// Japanese prose typically concludes sentences with the full-width "。"
-/// character. The rule reviews each line of Markdown text and raises a
-/// diagnostic—along with an autofix suggestion—whenever it finds a paragraph
-/// that ends in a half-width period.
+/// character. The rule reviews each line of Markdown text outside of code
+/// blocks and raises a diagnostic—along with an autofix suggestion—whenever it
+/// finds a line that ends in a half-width period. A period inside an inline
+/// code span is left alone.
 public struct JapanesePeriodRule: Rule, AutoFixable {
   public let id = "ja.period.prefer-fullwidth"
   public let description = "文末の終止符は「。」に統一してください。"
@@ -17,9 +18,13 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var out: [Diagnostic] = []
 
-    // 単純化: 行単位で見る。末尾の "." または "．" を検出（コードブロックは Linter 側でマスク済み）
-    for (i, line) in originalText.sourceLines.enumerated() {
-      guard let index = Self.terminalPeriodIndex(in: line) else { continue }
+    // 単純化: 行単位で見る。コードブロック以外の行で、末尾の "." または "．" を検出
+    let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
+    for (i, line) in originalText.sourceLines.enumerated() where !codeLines.contains(i + 1) {
+      guard let index = Self.terminalPeriodIndex(in: line), !inlineCode.contains(index) else {
+        continue
+      }
       let period = line[index]
       let d = Diagnostic(
         file: fileURL,
@@ -35,8 +40,13 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
   }
 
   public func fixing(originalText: String) -> String {
-    originalText.mappingSourceLines { line in
-      guard let index = Self.terminalPeriodIndex(in: line) else { return String(line) }
+    let document = Document(parsing: originalText)
+    let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
+    return originalText.mappingSourceLines(skipping: codeLines) { line in
+      guard let index = Self.terminalPeriodIndex(in: line), !inlineCode.contains(index) else {
+        return String(line)
+      }
       // 行末の "."/ "．" を "。" に置換し、後続の空白は保持する
       return line[..<index] + "。" + line[line.index(after: index)...]
     }

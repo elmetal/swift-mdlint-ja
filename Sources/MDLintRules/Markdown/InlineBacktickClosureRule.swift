@@ -5,8 +5,10 @@ import Markdown
 /// A rule that ensures inline code spans use balanced backticks.
 ///
 /// Inline code snippets must open and close with the same number of backtick
-/// characters. This rule inspects each non-code-block line for stray backtick
-/// runs and reports diagnostics when a matching closing delimiter is missing.
+/// characters. Code spans recognized by the Markdown parser (including ones
+/// that continue on the next line) and code blocks are skipped; any other
+/// backtick run that has no closing run of the same length on its line is
+/// reported.
 public struct InlineBacktickClosureRule: Rule {
   public let id = "ja.backtick.unmatched"
   public let description = "インラインコードのバッククォートは閉じてください。"
@@ -15,56 +17,16 @@ public struct InlineBacktickClosureRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let lines = originalText.components(separatedBy: "\n")
-    var inFencedCodeBlock = false
+    let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
 
-    for (index, line) in lines.enumerated() {
-      let trimmed = line.trimmingCharacters(in: .whitespaces)
-      if trimmed.hasPrefix("```") {
-        inFencedCodeBlock.toggle()
-        continue
-      }
-
-      if inFencedCodeBlock { continue }
-
-      var isInsideInlineCode = false
-      var unmatchedColumn: Int?
-      var currentIndex = line.startIndex
-
-      while currentIndex < line.endIndex {
-        if line[currentIndex] == "`" {
-          var runLength = 0
-          var lookahead = currentIndex
-          while lookahead < line.endIndex && line[lookahead] == "`" {
-            runLength += 1
-            lookahead = line.index(after: lookahead)
-          }
-
-          for _ in 0..<runLength {
-            if isInsideInlineCode {
-              isInsideInlineCode = false
-              unmatchedColumn = nil
-            } else {
-              isInsideInlineCode = true
-              if unmatchedColumn == nil {
-                let column = line.distance(from: line.startIndex, to: currentIndex) + 1
-                unmatchedColumn = column
-              }
-            }
-          }
-
-          currentIndex = lookahead
-          continue
-        }
-
-        currentIndex = line.index(after: currentIndex)
-      }
-
-      if isInsideInlineCode, let column = unmatchedColumn {
+    for (index, line) in originalText.sourceLines.enumerated()
+    where !codeLines.contains(index + 1) {
+      if let unmatched = BacktickScanner.scan(line, skipping: inlineCode).firstUnmatched {
         let diagnostic = Diagnostic(
           file: fileURL,
           line: index + 1,
-          column: column,
+          column: line.distance(from: line.startIndex, to: unmatched) + 1,
           ruleID: id,
           message: "インラインコードのバッククォートが閉じられていません。"
         )
