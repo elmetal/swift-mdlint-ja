@@ -19,13 +19,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Run tests
         run: swift test
 
   soundness:
     name: Soundness
-    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.1
+    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.19
     with:
       api_breakage_check_enabled: false
       docs_check_enabled: false
