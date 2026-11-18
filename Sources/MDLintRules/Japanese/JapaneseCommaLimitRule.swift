@@ -6,7 +6,8 @@ import Markdown
 ///
 /// Overusing commas makes Japanese sentences harder to read. This rule tracks commas
 /// within a sentence and emits a diagnostic when the fourth comma is encountered,
-/// encouraging the author to split or restructure the sentence.
+/// encouraging the author to split or restructure the sentence. A sentence ends at
+/// a terminator such as "。" or at a blank line (a paragraph break).
 public struct JapaneseCommaLimitRule: Rule {
   public let id = "ja.comma.max-three"
   public let description = "一文に含める読点は3つまでにしてください。"
@@ -30,8 +31,15 @@ public struct JapaneseCommaLimitRule: Rule {
     var limitExceeded = false
     var exceedingCommaLine: Int?
     var exceedingCommaColumn: Int?
+    var lineIsBlank = true
 
-    func emitDiagnosticIfNeeded() {
+    func endSentence() {
+      defer {
+        commaCount = 0
+        limitExceeded = false
+        exceedingCommaLine = nil
+        exceedingCommaColumn = nil
+      }
       guard limitExceeded,
         let diagnosticLine = exceedingCommaLine,
         let diagnosticColumn = exceedingCommaColumn
@@ -63,22 +71,22 @@ public struct JapaneseCommaLimitRule: Rule {
       }
 
       if sentenceTerminators.contains(character) {
-        emitDiagnosticIfNeeded()
-        commaCount = 0
-        limitExceeded = false
-        exceedingCommaLine = nil
-        exceedingCommaColumn = nil
+        endSentence()
       }
 
       if character.isLineTerminator {
+        // A blank line separates paragraphs, so no sentence continues across it.
+        if lineIsBlank { endSentence() }
         line += 1
         column = 1
+        lineIsBlank = true
       } else {
         column += 1
+        if !character.isWhitespace { lineIsBlank = false }
       }
     }
 
-    emitDiagnosticIfNeeded()
+    endSentence()
 
     return diagnostics
   }

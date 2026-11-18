@@ -62,6 +62,17 @@ struct SentenceLengthLimitRuleTests {
     #expect(diagnostic.column == firstSentence.count + 101)
   }
 
+  @Test func doesNotCountCharactersAcrossParagraphs() {
+    let paragraph = String(repeating: "あ", count: 60)
+    let content = "# 見出し\n\n" + paragraph + "\n\n" + paragraph + "\n"
+    let document = Document(parsing: content)
+    let rule = SentenceLengthLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
   @Test func reportsCorrectLineWithWindowsLineEndings() throws {
     let content = "短い文です。\r\n\r\n" + String(repeating: "あ", count: 101) + "。\r\n"
     let document = Document(parsing: content)
@@ -72,5 +83,6 @@ struct SentenceLengthLimitRuleTests {
     let diagnostic = try #require(diagnostics.first)
     #expect(diagnostics.count == 1)
     #expect(diagnostic.line == 3)
+    #expect(diagnostic.column == 101)
   }
 }
