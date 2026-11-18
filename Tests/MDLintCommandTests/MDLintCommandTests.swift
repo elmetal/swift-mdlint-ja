@@ -141,4 +141,47 @@ struct MDLintCommandTests {
     #expect(result.status == dryRun.status)
     #expect(try String(contentsOf: file, encoding: .utf8) == original)
   }
+
+  @Test(
+    "prints plain text diagnostics by default and for --format text",
+    arguments: [[], ["--format", "text"], ["--format", "TEXT"]])
+  func printsTextDiagnostics(formatArguments: [String]) throws {
+    let root = try makeTree(["s.md": "これはテストです...\n"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(formatArguments + ["s.md"], in: root)
+
+    let lines = result.stdout.split(separator: "\n")
+    #expect(result.status == 0)
+    #expect(!lines.isEmpty)
+    #expect(lines.allSatisfy { !$0.hasPrefix("::") })
+  }
+
+  @Test(
+    "prints workflow commands for --format gha, whatever the case",
+    arguments: ["gha", "GHA", "Gha"])
+  func printsWorkflowCommands(format: String) throws {
+    let root = try makeTree(["s.md": "これはテストです...\n"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--format", format, "s.md"], in: root)
+
+    let lines = result.stdout.split(separator: "\n")
+    #expect(result.status == 0)
+    #expect(!lines.isEmpty)
+    #expect(lines.allSatisfy { $0.hasPrefix("::") })
+  }
+
+  @Test("rejects an unknown --format value with a usage error")
+  func rejectsUnknownFormat() throws {
+    let root = try makeTree(["s.md": "これはテストです...\n"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--format", "json", "s.md"], in: root)
+
+    #expect(result.status == 64)
+    #expect(result.stdout.isEmpty)
+    #expect(result.stderr.contains("--format"))
+    #expect(result.stderr.contains("json"))
+  }
 }
