@@ -4,11 +4,11 @@ Learn how the command-line interface orchestrates rule loading, lint execution, 
 
 ## Command-line entry point
 
-The executable is defined by the ``MDLintCommand`` type, which uses ``ArgumentParser`` to expose the `mdlint-ja` command. The tool accepts Markdown file paths or directories to lint and offers options to apply automatic fixes (`--fix`), select a diagnostic format (`--format text|gha`), enable strict exit codes (`--strict`), and point to a JSON configuration file (`--config`).
+The executable is defined by the `MDLintCommand` type, which uses `ArgumentParser` to expose the `mdlint-ja` command. The tool accepts Markdown file paths or directories to lint and offers options to apply automatic fixes (`--fix`), select a diagnostic format (`--format text|gha`), enable strict exit codes (`--strict`), point to a JSON configuration file (`--config`), and choose the preferred politeness style (`--politeness-style auto|desumasu|dearu`).
 
 ## Loading lint rules
 
-When the command starts it creates a ``RuleConfigurationLoader``. The loader reads the optional configuration file to determine which rules from ``MDLintRules`` should be active. Unknown identifiers are reported to standard error but are otherwise ignored so that linting can continue.
+When the command starts it creates a `RuleConfigurationLoader`. The loader reads the optional configuration file to determine which rules from `MDLintRules` should be active. Unknown identifiers are reported to standard error but are otherwise ignored so that linting can continue.
 
 ## Resolving inputs
 
@@ -16,7 +16,7 @@ If no paths are provided, the current working directory is scanned. Otherwise, e
 
 ## Running the linter
 
-All collected files are processed by a ``Linter`` from ``MDLintCore``. The linter returns diagnostics and, when `--fix` is enabled, the fixed content. Fixable violations are written back to disk whenever the fixes differ from the original text.
+All collected files are processed by a `Linter` from `MDLintCore`. The linter returns diagnostics and, when `--fix` is enabled, the fixed content. Fixable violations are written back to disk whenever the fixes differ from the original text.
 
 ## Reporting diagnostics
 

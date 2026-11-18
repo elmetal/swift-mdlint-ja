@@ -33,6 +33,7 @@ Key options include:
 - `--format <text|gha>`: Select the output format (`gha` emits GitHub Actions–compatible annotations).
 - `--strict`: Exit with code `2` when any violation is detected.
 - `--config <path>`: Load a JSON file that lists rule identifiers to enable.
+- `--politeness-style <auto|desumasu|dearu>`: Choose the style that the politeness-style consistency rule enforces (`auto` follows the majority style of each document).
 
 ## Configuration
 
@@ -47,7 +48,7 @@ Configuration files express an array of rule identifiers in JSON. Unknown identi
 
 ## Output
 
-Diagnostics contain the file path, line number, and rule identifier. When `--format gha` is enabled, the output can be pasted directly into GitHub Actions annotations. If `--fix` is provided, files are modified in place when a fix succeeds.
+Diagnostics contain the file path, line number, and a message; the `text` format also shows the rule identifier. When `--format gha` is enabled, the output uses GitHub Actions workflow commands so violations appear as annotations. If `--fix` is provided, files are modified in place when a fix succeeds.
 
 ## Topics
 

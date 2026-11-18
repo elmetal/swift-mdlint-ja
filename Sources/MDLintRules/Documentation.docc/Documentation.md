@@ -2,7 +2,7 @@
 
 ## Overview
 
-The ``MDLintRules`` module contains the built-in linting rules that power SwiftMDLint's
+The ``MDLintRules`` module contains the built-in linting rules that power swift-mdlint-ja's
 Japanese-focused Markdown checks. It bundles ready-to-use rule implementations and
 provides helpers for retrieving either the complete default rule set or only the rules
 matching a subset of identifiers. Import this module when you need to reference the

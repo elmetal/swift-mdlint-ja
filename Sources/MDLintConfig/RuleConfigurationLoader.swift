@@ -2,10 +2,11 @@ import Foundation
 import MDLintCore
 import MDLintRules
 
-/// Loads lint rule identifiers from an `.mdlintconfig` JSON file.
+/// Loads lint rule identifiers from a JSON configuration file.
 ///
-/// ``RuleConfigurationLoader`` decodes the configuration file into
-/// ``DefaultRules.Identifier`` values and resolves them into concrete rules.
+/// ``RuleConfigurationLoader`` decodes the configuration file (a JSON array of
+/// rule identifier strings) into `DefaultRules.Identifier` values and resolves
+/// them into concrete rules.
 /// Unknown identifiers are reported to ``UnknownIdentifierHandler`` so callers
 /// can surface a warning before proceeding with the known rules only.
 public struct RuleConfigurationLoader {
@@ -39,8 +40,10 @@ public struct RuleConfigurationLoader {
   /// When `configurationPath` is `nil`, all default rules are returned.
   /// Unknown identifiers in the configuration are reported but ignored.
   ///
-  /// - Parameter configurationPath: The path to a JSON file containing rule
-  ///   identifiers.
+  /// - Parameters:
+  ///   - configurationPath: The path to a JSON file containing rule
+  ///     identifiers.
+  ///   - options: Options forwarded to the rules that accept them.
   /// - Throws: ``Error/fileNotFound(_:)`` when the configuration file does
   ///   not exist, or an error if the JSON cannot be decoded.
   /// - Returns: The resolved lint rules.
