@@ -18,6 +18,8 @@ mdlint-ja --strict --fix README.md
 
 ## Behavior summary
 
-- Exit code `0`: No diagnostics were produced.
+- Exit code `0`: No diagnostics were produced, or diagnostics were produced without `--strict`.
+- Exit code `1`: A path given on the command line does not exist. The remaining paths are still linted and reported. This code takes precedence over `2`.
 - Exit code `2`: Diagnostics were produced and `--strict` was supplied.
+- Exit code `64`: The command line is invalid, for example an unknown `--format` value or a missing configuration file.
 - Other codes: Reserved for unexpected runtime errors.

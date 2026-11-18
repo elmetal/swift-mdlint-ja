@@ -63,8 +63,8 @@ struct MDLintCommandTests {
     #expect(repeatedLines.count == onceLines.count)
   }
 
-  @Test("warns about a path that does not exist and lints the rest")
-  func warnsAboutMissingPath() throws {
+  @Test("fails for a path that does not exist but still lints the rest")
+  func failsForMissingPath() throws {
     let root = try makeTree(["a.md": "これはテストです.\n"])
     defer { try? FileManager.default.removeItem(at: root) }
 
@@ -72,9 +72,53 @@ struct MDLintCommandTests {
     let result = try runMDLint(["typo.md", "a.md"], in: root)
 
     #expect(baseline.stderr.isEmpty)
-    #expect(result.stderr == "warning: Skipping typo.md: no such file or directory\n")
+    #expect(baseline.status == 0)
+    #expect(result.stderr == "error: typo.md: no such file or directory\n")
     #expect(result.stdout == baseline.stdout)
-    #expect(result.status == baseline.status)
+    #expect(result.status == 1)
+  }
+
+  @Test("reports every missing path and does not claim a clean run")
+  func reportsEveryMissingPath() throws {
+    let root = try makeTree(["clean.md": "これはテストです。\n"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let clean = try runMDLint(["clean.md"], in: root)
+    let result = try runMDLint(["typo.md", "clean.md", "no-such-directory"], in: root)
+
+    #expect(clean.status == 0)
+    #expect(clean.stdout.contains("No rule violations"))
+    #expect(
+      result.stderr
+        == "error: typo.md: no such file or directory\n"
+        + "error: no-such-directory: no such file or directory\n")
+    #expect(result.stdout.isEmpty)
+    #expect(result.status == 1)
+  }
+
+  @Test("exits with 1 for a missing path even when --strict finds violations")
+  func missingPathTakesPrecedenceOverStrict() throws {
+    let root = try makeTree(["a.md": "これはテストです.\n"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let strict = try runMDLint(["--strict", "a.md"], in: root)
+    let result = try runMDLint(["--strict", "typo.md", "a.md"], in: root)
+
+    #expect(strict.status == 2)
+    #expect(result.stdout == strict.stdout)
+    #expect(result.status == 1)
+  }
+
+  @Test("still fixes the files that exist when another path is missing")
+  func fixesExistingFilesDespiteMissingPath() throws {
+    let root = try makeTree(["a.md": "これはテストです.\n"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--fix", "typo.md", "a.md"], in: root)
+
+    let fixed = try String(contentsOf: root.appendingPathComponent("a.md"), encoding: .utf8)
+    #expect(fixed == "これはテストです。\n")
+    #expect(result.status == 1)
   }
 
   @Test("warns about a file that is not valid UTF-8 and lints the rest")
