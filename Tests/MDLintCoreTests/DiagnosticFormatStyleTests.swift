@@ -73,4 +73,24 @@ struct GHADiagnosticFormatStyleTests {
     #expect(
       format(diagnostic) == "::notice file=\(sampleFileURL.path),line=3,col=5::Needs attention")
   }
+
+  @Test("Escapes workflow command metacharacters")
+  func escapesWorkflowCommandMetacharacters() {
+    let diagnostic = Diagnostic(
+      file: URL(fileURLWithPath: "/tmp/a,b:c.md"),
+      line: 1,
+      column: 1,
+      ruleID: "example.rule",
+      message: "100% done\r\nnext",
+      severity: .error,
+      fixIt: "line one\nline two"
+    )
+
+    let formatted = GHADiagnosticFormatStyle().format(diagnostic)
+
+    #expect(
+      formatted
+        == "::error file=/tmp/a%2Cb%3Ac.md,line=1,col=1::100%25 done%0D%0Anext (fix: line one%0Aline two)"
+    )
+  }
 }
