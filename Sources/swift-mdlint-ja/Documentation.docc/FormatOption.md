@@ -13,7 +13,7 @@ mdlint-ja --format text Docs
 mdlint-ja --format gha Docs
 ```
 
-- The option accepts only two values: `text` (default) and `gha`.
+- The option accepts only two values: `text` (default) and `gha`. Any other value is rejected with a usage error.
 - The comparison is case-insensitive, so `--format GHA` yields the same result as `--format gha`.
 
 ## When to use each format

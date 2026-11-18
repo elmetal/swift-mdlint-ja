@@ -11,11 +11,21 @@ struct MDLintCommand: ParsableCommand {
     abstract: "Minimal Japanese Markdown linter in Swift."
   )
 
+  enum OutputFormat: String, CaseIterable, ExpressibleByArgument {
+    case text
+    case gha
+
+    /// Accepts the value case-insensitively (`--format GHA`).
+    init?(argument: String) {
+      self.init(rawValue: argument.lowercased())
+    }
+  }
+
   @Flag(name: [.short, .long], help: "Attempt to fix fixable violations in-place.")
   var fix: Bool = false
 
   @Option(name: [.customLong("format")], help: "Output format: text | gha (GitHub Actions).")
-  var format: String = "text"
+  var format: OutputFormat = .text
 
   @Flag(name: [.long], help: "Exit with non-zero status code when violations are found.")
   var strict: Bool = false
@@ -70,15 +80,14 @@ struct MDLintCommand: ParsableCommand {
       }
     }
 
-    let format =
-      ((format.lowercased() == "gha")
-        ? GHADiagnosticFormatStyle().format : TextDiagnosticFormatStyle().format)
-
     if allDiagnostics.isEmpty {
       print("✨ No rule violations found.")
     } else {
       for diagnostic in allDiagnostics.sorted(by: Diagnostic.sorter) {
-        print(format(diagnostic))
+        switch format {
+        case .text: print(TextDiagnosticFormatStyle().format(diagnostic))
+        case .gha: print(GHADiagnosticFormatStyle().format(diagnostic))
+        }
       }
     }
 
