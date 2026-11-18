@@ -29,6 +29,12 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
     "(", ")", "[", "]", "{", "}", "<", ">", "「", "」", "『", "』", "（", "）", "［", "］",
     "【", "】", "〈", "〉", "《", "》", "：", ";", "；", "“", "”", "'", "\"",
   ]
+  /// Words and phrases that begin with a conjunction from ``conjunctions`` without being
+  /// that conjunction, such as "または" ("or"), which begins with "また" ("also").
+  private let conjunctionLookalikes: [String] = [
+    "または", "またも", "またの", "するとき", "それに対", "それによ", "それについて", "それに関",
+    "一方的", "一方通行", "そのために", "そのための",
+  ]
 
   public init() {}
 
@@ -171,7 +177,10 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
         return false
       }
     }
-    return true
+    // A longer word that merely begins with the conjunction is a different word.
+    let conjunction = text[range]
+    let rest = text[range.lowerBound..<sentenceRange.upperBound]
+    return !conjunctionLookalikes.contains { $0.hasPrefix(conjunction) && rest.hasPrefix($0) }
   }
 
   private struct ConjunctionOccurrence {
