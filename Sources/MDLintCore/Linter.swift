@@ -21,6 +21,9 @@ public struct Linter {
 
   /// Lints the given Markdown text and optionally applies automatic fixes.
   ///
+  /// Code blocks, inline code, and raw HTML are hidden from the rules by a
+  /// ``MaskedSource``, so they are neither reported nor rewritten.
+  ///
   /// - Parameters:
   ///   - content: The Markdown source to lint.
   ///   - fileURL: The URL used in diagnostics to identify the document.
@@ -31,23 +34,27 @@ public struct Linter {
   ///   string. The second element is `nil` when `applyFixes` is `false`.
   public func lint(content: String, fileURL: URL, applyFixes: Bool) -> ([Diagnostic], String?) {
     let document = Document(parsing: content)
+    let source = MaskedSource(content: content, document: document)
     var diagnostics: [Diagnostic] = []
 
     for rule in rules {
       diagnostics.append(
-        contentsOf: rule.check(document: document, fileURL: fileURL, originalText: content))
+        contentsOf: rule.check(document: document, fileURL: fileURL, originalText: source.text))
     }
 
-    if applyFixes {
-      var fixed = content
-      for rule in rules {
-        if let fixableRule = rule as? AutoFixable {
-          fixed = fixableRule.fixing(originalText: fixed)
-        }
-      }
-      return (diagnostics, fixed)
-    } else {
-      return (diagnostics, nil)
+    guard applyFixes else { return (diagnostics, nil) }
+
+    var maskedText = source.text
+    var fixed = content
+    for rule in rules {
+      guard let fixableRule = rule as? AutoFixable else { continue }
+      let candidate = fixableRule.fixing(originalText: maskedText)
+      // A fix that disturbed the placeholders cannot be mapped back onto the
+      // hidden regions, so it is dropped rather than risk corrupting them.
+      guard let restored = source.unmasking(candidate) else { continue }
+      maskedText = candidate
+      fixed = restored
     }
+    return (diagnostics, fixed)
   }
 }

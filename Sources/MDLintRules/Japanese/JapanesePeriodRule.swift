@@ -18,7 +18,7 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
     var out: [Diagnostic] = []
     let text = originalText
 
-    // 単純化: 行単位で見る。末尾の "." または "．" を検出（コードブロックは除外したいが最小構成のため簡略化）
+    // 単純化: 行単位で見る。末尾の "." または "．" を検出（コードブロックは Linter 側でマスク済み）
     let lines = text.components(separatedBy: "\n")
     var offset = 0
     for (i, line) in lines.enumerated() {

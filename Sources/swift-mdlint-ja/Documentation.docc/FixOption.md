@@ -15,6 +15,7 @@ mdlint-ja -f README.md
 
 - The option is disabled by default; omit the flag when you want to perform a dry run.
 - If a file cannot be read or written, the linter skips the automatic fix but still reports diagnostics.
+- Code blocks, inline code, and raw HTML are never modified.
 
 ## Workflow tips
 

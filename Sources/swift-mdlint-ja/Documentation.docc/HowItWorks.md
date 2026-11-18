@@ -18,6 +18,16 @@ If no paths are provided, the current working directory is scanned. Otherwise, e
 
 All collected files are processed by a `Linter` from `MDLintCore`. The linter returns diagnostics and, when `--fix` is enabled, the fixed content. Fixable violations are written back to disk whenever the fixes differ from the original text.
 
+## Excluding code and HTML
+
+Rules check prose only. Before running the rules, the linter parses the file and replaces the following regions with placeholder characters:
+
+- Fenced and indented code blocks
+- Inline code spans
+- HTML blocks and inline HTML, including comments
+
+Each hidden character becomes exactly one placeholder, so reported line and column numbers still match the file. The same masked text is handed to the automatic fixes, and the hidden regions are restored afterwards, which means `--fix` never rewrites code or HTML. Link destinations and front matter are not hidden.
+
 ## Reporting diagnostics
 
 Diagnostics are sorted for stable output before being printed. Two output formats are supported:

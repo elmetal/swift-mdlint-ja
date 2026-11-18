@@ -17,6 +17,9 @@ formatting styles for reporting issues to users.
 - ``Rule``
 - ``AutoFixable``
 
+### Excluding Code and HTML
+- ``MaskedSource``
+
 ### Diagnostic Reporting
 - ``Diagnostic``
 - ``Diagnostic/Severity``
