@@ -6,8 +6,10 @@ import Markdown
 ///
 /// Markdown documents should promote heading levels sequentially so that an
 /// `H2` heading is followed by `H3`, not `H4`. The rule tracks the level of each
-/// heading that appears in the source text and emits a diagnostic whenever a
-/// heading jumps more than one level.
+/// top-level heading in the parsed document and emits a diagnostic whenever a
+/// heading jumps more than one level. Because it relies on the parsed document,
+/// lines that merely start with `#` (for example comments inside code blocks)
+/// are not mistaken for headings.
 public struct HeadingLevelSkipRule: Rule {
   public let id = "md.heading.no-skip-level"
   public let description = "見出しレベルを1段ずつ上げてください（例: H2の次はH3）。"
@@ -15,33 +17,23 @@ public struct HeadingLevelSkipRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var out: [Diagnostic] = []
-    var lastLevel: Int = 0
-    var lineCursor = 1
+    var lastLevel = 0
 
-    let lines = originalText.components(separatedBy: "\n")
-    for line in lines {
-      if let level = headingLevel(of: line) {
-        if lastLevel > 0, level > lastLevel + 1 {
-          let d = Diagnostic(
-            file: fileURL,
-            line: lineCursor,
-            column: 1,
-            ruleID: id,
-            message: "H\(lastLevel) の次に H\(level) は飛び級です。H\(lastLevel + 1) を検討してください。",
-            severity: .warning)
-          out.append(d)
-        }
-        lastLevel = level
+    for block in document.children {
+      guard let heading = block as? Heading else { continue }
+      let level = heading.level
+      if lastLevel > 0, level > lastLevel + 1, let start = heading.range?.lowerBound {
+        let d = Diagnostic(
+          file: fileURL,
+          line: start.line,
+          column: start.column,
+          ruleID: id,
+          message: "H\(lastLevel) の次に H\(level) は飛び級です。H\(lastLevel + 1) を検討してください。",
+          severity: .warning)
+        out.append(d)
       }
-      lineCursor += 1
+      lastLevel = level
     }
     return out
-  }
-
-  private func headingLevel(of line: String) -> Int? {
-    let trimmed = line.trimmingCharacters(in: .whitespaces)
-    guard trimmed.hasPrefix("#") else { return nil }
-    let level = trimmed.prefix(while: { $0 == "#" }).count
-    return level
   }
 }
