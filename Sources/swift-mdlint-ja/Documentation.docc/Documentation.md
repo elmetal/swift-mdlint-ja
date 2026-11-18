@@ -20,7 +20,7 @@ After the build completes, either add `.build/release/mdlint-ja` to your `PATH` 
 
 ## Usage
 
-Lint one or more Markdown files or directories. With no arguments, the tool recursively scans all `.md` files under the current working directory.
+Lint one or more Markdown files or directories. With no arguments, the tool recursively scans all `.md` files under the current working directory. Hidden files and directories (such as `.build` or `.git`) are skipped while scanning directories.
 
 ```bash
 mdlint-ja Docs/README.md

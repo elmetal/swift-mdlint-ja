@@ -29,7 +29,7 @@ Key options:
 - `--config <path>`: Load a JSON file that lists the rule identifiers to enable.
 - `--politeness-style <auto|desumasu|dearu>`: Control how the politeness-style consistency rule resolves conflicts.
 
-When no paths are provided the linter scans the current directory recursively for files with the `.md` extension.
+When no paths are provided the linter scans the current directory recursively for files with the `.md` extension. Hidden files and directories (such as `.build` or `.git`) are skipped while scanning directories.
 
 ### Configuration file
 

@@ -98,7 +98,10 @@ struct MDLintCommand: ParsableCommand {
       var isDir: ObjCBool = false
       if fm.fileExists(atPath: input.path, isDirectory: &isDir) {
         if isDir.boolValue {
-          let enumerator = fm.enumerator(at: input, includingPropertiesForKeys: nil)
+          // Hidden entries are skipped so that `.build`, `.git`, and similar
+          // directories are neither linted nor rewritten by `--fix`.
+          let enumerator = fm.enumerator(
+            at: input, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
           while let file = enumerator?.nextObject() as? URL {
             if file.pathExtension.lowercased() == "md" {
               urls.append(file)
