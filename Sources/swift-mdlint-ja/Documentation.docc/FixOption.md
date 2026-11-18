@@ -14,7 +14,8 @@ mdlint-ja -f README.md
 ```
 
 - The option is disabled by default; omit the flag when you want to perform a dry run.
-- If a file cannot be read or written, the linter skips the automatic fix but still reports diagnostics.
+- If a file cannot be read as UTF-8, it is skipped with a warning on standard error.
+- If the fixed content cannot be written back, a warning is printed on standard error and the diagnostics for the unmodified file are reported.
 - Code blocks, inline code, and raw HTML are never modified.
 
 ## Workflow tips

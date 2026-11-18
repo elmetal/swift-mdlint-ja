@@ -62,4 +62,83 @@ struct MDLintCommandTests {
     #expect(!once.stdout.contains("No rule violations"))
     #expect(repeatedLines.count == onceLines.count)
   }
+
+  @Test("warns about a path that does not exist and lints the rest")
+  func warnsAboutMissingPath() throws {
+    let root = try makeTree(["a.md": "これはテストです...\n"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let baseline = try runMDLint(["a.md"], in: root)
+    let result = try runMDLint(["typo.md", "a.md"], in: root)
+
+    #expect(baseline.stderr.isEmpty)
+    #expect(result.stderr == "warning: Skipping typo.md: no such file or directory\n")
+    #expect(result.stdout == baseline.stdout)
+    #expect(result.status == baseline.status)
+  }
+
+  @Test("warns about a file that is not valid UTF-8 and lints the rest")
+  func warnsAboutNonUTF8File() throws {
+    let root = try makeTree(["a.md": "これはテストです...\n"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let baseline = try runMDLint(["."], in: root)
+
+    // "あいう" in Shift_JIS, which is not a valid UTF-8 byte sequence.
+    let shiftJIS = Data([0x82, 0xA0, 0x82, 0xA2, 0x82, 0xA4, 0x0A])
+    try shiftJIS.write(to: root.appendingPathComponent("sjis.md"))
+
+    let result = try runMDLint(["."], in: root)
+
+    let warnings = result.stderr.split(separator: "\n")
+    #expect(warnings.count == 1)
+    #expect(result.stderr.hasPrefix("warning: Skipping "))
+    #expect(result.stderr.hasSuffix("sjis.md: the file could not be read as UTF-8\n"))
+    #expect(result.stdout == baseline.stdout)
+    #expect(result.status == baseline.status)
+  }
+
+  @Test("rewrites a file only when --fix is given")
+  func rewritesFileOnlyWithFix() throws {
+    let original = "これはテストです...\n"
+    let root = try makeTree(["a.md": original])
+    defer { try? FileManager.default.removeItem(at: root) }
+    let file = root.appendingPathComponent("a.md")
+
+    let dryRun = try runMDLint(["a.md"], in: root)
+    #expect(dryRun.stderr.isEmpty)
+    #expect(try String(contentsOf: file, encoding: .utf8) == original)
+
+    let fixing = try runMDLint(["--fix", "a.md"], in: root)
+    #expect(fixing.stderr.isEmpty)
+    #expect(try String(contentsOf: file, encoding: .utf8) != original)
+  }
+
+  // The superuser can write into a read-only directory, so the failure cannot be provoked.
+  @Test("warns when fixes cannot be written back", .enabled(if: getuid() != 0))
+  func warnsWhenFixesCannotBeWritten() throws {
+    let original = "これはテストです...\n"
+    let root = try makeTree(["locked/a.md": original])
+    let directory = root.appendingPathComponent("locked")
+    let file = directory.appendingPathComponent("a.md")
+    defer {
+      try? FileManager.default.setAttributes(
+        [.posixPermissions: 0o755], ofItemAtPath: directory.path)
+      try? FileManager.default.removeItem(at: root)
+    }
+
+    let dryRun = try runMDLint(["locked/a.md"], in: root)
+
+    // An atomic write replaces the file, which a read-only directory forbids.
+    try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: directory.path)
+    let result = try runMDLint(["--fix", "locked/a.md"], in: root)
+
+    let warnings = result.stderr.split(separator: "\n")
+    #expect(warnings.count == 1)
+    #expect(result.stderr.hasPrefix("warning: Could not write fixes to "))
+    #expect(result.stderr.contains("locked/a.md: "))
+    #expect(result.stdout == dryRun.stdout)
+    #expect(result.status == dryRun.status)
+    #expect(try String(contentsOf: file, encoding: .utf8) == original)
+  }
 }

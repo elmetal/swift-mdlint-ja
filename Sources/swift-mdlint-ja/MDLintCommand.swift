@@ -33,13 +33,10 @@ struct MDLintCommand: ParsableCommand {
   var paths: [String] = []
 
   mutating func run() throws {
-    let fm = FileManager.default
     let loader = RuleConfigurationLoader(
-      fileManager: fm,
       unknownIdentifierHandler: { unknownIdentifiers in
-        let warning =
-          "warning: Ignoring unknown rule identifiers: \(unknownIdentifiers.joined(separator: ", "))\n"
-        FileHandle.standardError.write(Data(warning.utf8))
+        Self.warn(
+          "Ignoring unknown rule identifiers: \(unknownIdentifiers.joined(separator: ", "))")
       })
 
     let rules: [Rule]
@@ -57,12 +54,19 @@ struct MDLintCommand: ParsableCommand {
     var allDiagnostics: [Diagnostic] = []
 
     for url in urls {
-      guard let content = try? String(contentsOf: url, encoding: .utf8) else { continue }
+      guard let content = try? String(contentsOf: url, encoding: .utf8) else {
+        Self.warn("Skipping \(url.path): the file could not be read as UTF-8")
+        continue
+      }
       let (diagnostics, fixed) = linter.lint(content: content, fileURL: url, applyFixes: fix)
       allDiagnostics.append(contentsOf: diagnostics)
 
-      if fix, let fixed = fixed, fixed != content {
-        try? fixed.write(to: url, atomically: true, encoding: .utf8)
+      if let fixed, fixed != content {
+        do {
+          try fixed.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+          Self.warn("Could not write fixes to \(url.path): \(error.localizedDescription)")
+        }
       }
     }
 
@@ -95,32 +99,35 @@ struct MDLintCommand: ParsableCommand {
       }
     }
 
-    let inputs: [URL]
-    if paths.isEmpty {
-      inputs = [URL(fileURLWithPath: ".")]
-    } else {
-      inputs = paths.map { URL(fileURLWithPath: $0) }
-    }
+    let inputs = paths.isEmpty ? ["."] : paths
 
-    for input in inputs {
+    for path in inputs {
+      let input = URL(fileURLWithPath: path)
       var isDir: ObjCBool = false
-      if fm.fileExists(atPath: input.path, isDirectory: &isDir) {
-        if isDir.boolValue {
-          // Hidden entries are skipped so that `.build`, `.git`, and similar
-          // directories are neither linted nor rewritten by `--fix`.
-          let enumerator = fm.enumerator(
-            at: input, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
-          while let file = enumerator?.nextObject() as? URL {
-            if file.pathExtension.lowercased() == "md" {
-              add(file)
-            }
+      guard fm.fileExists(atPath: input.path, isDirectory: &isDir) else {
+        Self.warn("Skipping \(path): no such file or directory")
+        continue
+      }
+
+      if isDir.boolValue {
+        // Hidden entries are skipped so that `.build`, `.git`, and similar
+        // directories are neither linted nor rewritten by `--fix`.
+        let enumerator = fm.enumerator(
+          at: input, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+        while let file = enumerator?.nextObject() as? URL {
+          if file.pathExtension.lowercased() == "md" {
+            add(file)
           }
-        } else if input.pathExtension.lowercased() == "md" {
-          add(input)
         }
+      } else if input.pathExtension.lowercased() == "md" {
+        add(input)
       }
     }
     return urls
+  }
+
+  private static func warn(_ message: String) {
+    FileHandle.standardError.write(Data("warning: \(message)\n".utf8))
   }
 }
 
