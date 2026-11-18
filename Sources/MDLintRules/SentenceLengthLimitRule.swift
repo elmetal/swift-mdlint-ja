@@ -9,6 +9,11 @@ import Markdown
 /// while ignoring URL substrings and inline code spans, and reports a diagnostic when the
 /// length exceeds 100. A sentence ends at a terminator such as "。", at a blank line (a
 /// paragraph break), or at a code block; the contents of code blocks are not counted.
+///
+/// A sentence also ends where the next block begins, so list items, headings, and table
+/// rows that follow each other without a blank line are separate sentences, and so is each
+/// cell of a table. An ASCII period ends a sentence when whitespace or the end of the line
+/// follows it, which keeps an English paragraph from being measured as a single sentence.
 public struct SentenceLengthLimitRule: Rule {
   public let id = "ja.sentence.max-one-hundred-characters"
   public let description = "URL とコードを除いて一文は100文字以内にしてください。"
@@ -24,6 +29,8 @@ public struct SentenceLengthLimitRule: Rule {
     var currentURLRangeIndex = 0
 
     var diagnostics: [Diagnostic] = []
+    let sentenceBreaks = document.sentenceBreaks
+    var previousCharacter: Character?
 
     var line = 1
     var column = 1
@@ -120,8 +127,9 @@ public struct SentenceLengthLimitRule: Rule {
       }
 
       if character.isLineTerminator {
-        // A blank line separates paragraphs, so no sentence continues across it.
-        if lineIsBlank { endSentence() }
+        // A blank line separates paragraphs, so no sentence continues across it. Nor does
+        // one continue into the next block.
+        if lineIsBlank || sentenceBreaks.startsBlock(atLine: line + 1) { endSentence() }
         line += 1
         column = 1
         lineIsBlank = true
@@ -131,7 +139,18 @@ public struct SentenceLengthLimitRule: Rule {
       } else {
         column += 1
         if !character.isWhitespace { lineIsBlank = false }
+        // An ASCII period ends the sentence only when whitespace follows it, which keeps
+        // "v1.2" and "example.com" in one piece.
+        let isTerminalPeriod =
+          character == "."
+          && (nextIndex == originalText.endIndex || originalText[nextIndex].isWhitespace)
+        if isTerminalPeriod
+          || sentenceBreaks.separatesTableCells(character, after: previousCharacter, onLine: line)
+        {
+          endSentence()
+        }
       }
+      previousCharacter = character
     }
 
     endSentence()

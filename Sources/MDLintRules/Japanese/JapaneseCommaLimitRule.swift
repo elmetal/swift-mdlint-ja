@@ -9,6 +9,11 @@ import Markdown
 /// encouraging the author to split or restructure the sentence. A sentence ends at
 /// a terminator such as "。", at a blank line (a paragraph break), or at a code
 /// block; the contents of code blocks and inline code spans are not counted.
+///
+/// A sentence also ends where the next block begins, so list items, headings, and
+/// table rows that follow each other without a blank line are separate sentences,
+/// and so is each cell of a table. An ASCII period ends a sentence when whitespace
+/// or the end of the line follows it.
 public struct JapaneseCommaLimitRule: Rule {
   public let id = "ja.comma.max-three"
   public let description = "一文に含める読点は3つまでにしてください。"
@@ -24,6 +29,8 @@ public struct JapaneseCommaLimitRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
+    let sentenceBreaks = document.sentenceBreaks
+    var previousCharacter: Character?
 
     var line = 1
     var column = 1
@@ -92,8 +99,11 @@ public struct JapaneseCommaLimitRule: Rule {
       }
 
       if character.isLineTerminator {
-        // A blank line separates paragraphs, so no sentence continues across it.
-        if lineIsBlank { endSentence() }
+        // A blank line separates paragraphs, so no sentence continues across it. Nor does
+        // one continue into the next block or past an ASCII period that ends the line.
+        if lineIsBlank || previousCharacter == "." || sentenceBreaks.startsBlock(atLine: line + 1) {
+          endSentence()
+        }
         line += 1
         column = 1
         lineIsBlank = true
@@ -103,7 +113,16 @@ public struct JapaneseCommaLimitRule: Rule {
       } else {
         column += 1
         if !character.isWhitespace { lineIsBlank = false }
+        // An ASCII period ends the sentence only when whitespace follows it, which keeps
+        // "v1.2" and "example.com" in one piece.
+        let followsTerminalPeriod = previousCharacter == "." && character.isWhitespace
+        if followsTerminalPeriod
+          || sentenceBreaks.separatesTableCells(character, after: previousCharacter, onLine: line)
+        {
+          endSentence()
+        }
       }
+      previousCharacter = character
     }
 
     endSentence()
