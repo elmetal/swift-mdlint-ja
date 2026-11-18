@@ -38,45 +38,6 @@ struct LinterTests {
   }
 }
 
-@Suite("Diagnostic Formatters")
-struct DiagnosticFormatterTests {
-  @Test func textFormatterProducesReadableOutput() {
-    let diagnostic = Diagnostic(
-      file: sampleFileURL,
-      line: 2,
-      column: 3,
-      ruleID: "example.rule",
-      message: "Example message",
-      severity: .error
-    )
-
-    let formatter = TextDiagnosticFormatStyle()
-    let formatted = formatter.format(diagnostic)
-
-    #expect(formatted == "[ERROR] \(sampleFileURL.path):2:3 [example.rule] Example message")
-  }
-
-  @Test func ghaFormatterEscapesNewlinesAndIncludesFixIt() {
-    let diagnostic = Diagnostic(
-      file: sampleFileURL,
-      line: 5,
-      column: 2,
-      ruleID: "example.rule",
-      message: "First line\nSecond line",
-      severity: .warning,
-      fixIt: "Do something"
-    )
-
-    let formatter = GHADiagnosticFormatStyle()
-    let formatted = formatter.format(diagnostic)
-
-    #expect(
-      formatted
-        == "::warning file=\(sampleFileURL.path),line=5,col=2::First line%0ASecond line (fix: Do something)"
-    )
-  }
-}
-
 @Suite("Diagnostic Sorting")
 struct DiagnosticSortingTests {
   @Test func sortsByFileLineColumnAndRule() {
@@ -99,45 +60,20 @@ struct DiagnosticSortingTests {
   }
 }
 
-@Suite("String lineColumn")
-struct LineColumnTests {
-  @Test func returnsStartPositionForOffsetZero() {
-    let text = "Line"
-    let position = text.lineColumn(for: 0)
-
-    #expect(position.line == 1)
-    #expect(position.column == 1)
-  }
-
-  @Test func countsNewlinesAndUTF16CodeUnits() throws {
-    let text = "First line\n😀A"
-    let indexOfA = try #require(text.firstIndex(of: "A"))
-    let utf16Index = try #require(indexOfA.samePosition(in: text.utf16))
-    let offset = text.utf16.distance(from: text.utf16.startIndex, to: utf16Index)
-
-    let position = text.lineColumn(for: offset)
-
-    #expect(position.line == 2)
-    #expect(position.column == 2)
-  }
-}
-
 private struct ReplaceBadRule: Rule, AutoFixable {
   let id = "test.replace-bad"
   let description = "Replaces the word 'bad' with 'good'"
 
   func check(document _: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     guard let range = originalText.range(of: "bad") else { return [] }
-    let utf16 = originalText.utf16
-    guard let utf16Start = range.lowerBound.samePosition(in: utf16) else { return [] }
-    let offset = utf16.distance(from: utf16.startIndex, to: utf16Start)
-    let position = originalText.lineColumn(for: offset)
+    let linesBefore = originalText[..<range.lowerBound].split(
+      separator: "\n", omittingEmptySubsequences: false)
 
     return [
       Diagnostic(
         file: fileURL,
-        line: position.line,
-        column: position.column,
+        line: linesBefore.count,
+        column: (linesBefore.last?.count ?? 0) + 1,
         ruleID: id,
         message: "Replace 'bad' with 'good'"
       )

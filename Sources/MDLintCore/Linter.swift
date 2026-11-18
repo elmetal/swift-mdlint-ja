@@ -51,25 +51,3 @@ public struct Linter {
     }
   }
 }
-
-// MARK: - Helpers
-
-extension String {
-  /// Returns (line, column) for the given UTF16-based index (simple heuristic).
-  func lineColumn(for utf16Offset: Int) -> (line: Int, column: Int) {
-    var line = 1
-    var column = 1
-    var count = 0
-    for ch in self {
-      if count >= utf16Offset { break }
-      if ch == "\n" {
-        line += 1
-        column = 1
-      } else {
-        column += 1
-      }
-      count += String(ch).utf16.count
-    }
-    return (line, column)
-  }
-}
