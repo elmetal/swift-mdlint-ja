@@ -72,16 +72,19 @@ struct MDLintCommand: ParsableCommand {
         Self.warn("Skipping \(url.path): the file could not be read as UTF-8")
         continue
       }
-      let (diagnostics, fixed) = linter.lint(content: content, fileURL: url, applyFixes: fix)
-      allDiagnostics.append(contentsOf: diagnostics)
+      var (diagnostics, fixed) = linter.lint(content: content, fileURL: url, applyFixes: fix)
 
       if let fixed, fixed != content {
         do {
           try fixed.write(to: url, atomically: true, encoding: .utf8)
+          // Report what is left in the rewritten file so that locations match
+          // the file on disk and `--strict` only fails for remaining violations.
+          diagnostics = linter.lint(content: fixed, fileURL: url, applyFixes: false).0
         } catch {
           Self.warn("Could not write fixes to \(url.path): \(error.localizedDescription)")
         }
       }
+      allDiagnostics.append(contentsOf: diagnostics)
     }
 
     if allDiagnostics.isEmpty {
