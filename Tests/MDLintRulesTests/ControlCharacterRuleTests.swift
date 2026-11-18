@@ -47,4 +47,21 @@ struct ControlCharacterRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func leavesFormatCharactersAlone() {
+    // U+200D (zero-width joiner) glues emoji sequences together, and U+200B is
+    // reported by ZeroWidthSpaceRule; neither is a Cc control character.
+    let content = "家族👨\u{200D}👩\u{200D}👧です\n前\u{200B}後"
+    let document = Document(parsing: content)
+    let rule = ControlCharacterRule()
+
+    let diagnostics = rule.check(
+      document: document,
+      fileURL: sampleFileURL,
+      originalText: content
+    )
+
+    #expect(diagnostics.isEmpty)
+    #expect(rule.fixing(originalText: content) == content)
+  }
 }
