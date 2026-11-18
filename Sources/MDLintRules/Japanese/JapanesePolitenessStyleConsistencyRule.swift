@@ -4,11 +4,12 @@ import Markdown
 
 /// A rule that ensures consistent use of politeness styles (ですます調 / である調) in Japanese text.
 ///
-/// The rule scans Markdown lines outside of code blocks (a line that ends in an inline
-/// code span is not classified by the contents of that span), detects whether each sentence
-/// ends in the polite "ですます" style or the plain "である" style, and raises diagnostics when
-/// sentences using the minority style are found. The preferred style can be supplied via
-/// ``PreferredStyle``; when set to ``PreferredStyle/auto`` the majority style in the document is used.
+/// The rule scans Markdown lines, detects whether each sentence ends in the polite "ですます"
+/// style or the plain "である" style, and raises diagnostics when sentences using the minority
+/// style are found. The linter hides code and raw HTML before the rule runs, so a line that ends
+/// in an inline code span is not classified by the contents of that span. The preferred style
+/// can be supplied via ``PreferredStyle``; when set to ``PreferredStyle/auto`` the majority style
+/// in the document is used.
 public struct JapanesePolitenessStyleConsistencyRule: Rule {
   public enum PreferredStyle: String, Sendable {
     case auto
@@ -37,10 +38,7 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
   }
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
-    let sentences = collectSentences(
-      from: originalText,
-      skipping: document.codeBlockLineNumbers,
-      inlineCode: document.inlineCodeRanges(in: originalText))
+    let sentences = collectSentences(from: originalText)
 
     guard !sentences.isEmpty else { return [] }
 
@@ -100,22 +98,17 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
     }
   }
 
-  private func collectSentences(
-    from text: String, skipping codeLines: Set<Int>, inlineCode: InlineCodeRanges
-  ) -> [Sentence] {
+  private func collectSentences(from text: String) -> [Sentence] {
     var sentences: [Sentence] = []
 
     for (index, line) in text.sourceLines.enumerated() {
-      let lineNumber = index + 1
-      if codeLines.contains(lineNumber) { continue }
-
       // A line can hold several sentences, and each one has a style of its own.
       for sentence in Self.sentences(in: line) {
-        guard let detection = detectStyle(in: sentence, inlineCode: inlineCode) else { continue }
+        guard let detection = detectStyle(in: sentence) else { continue }
 
         let offset = line.distance(from: line.startIndex, to: sentence.startIndex)
         sentences.append(
-          Sentence(style: detection.style, line: lineNumber, column: detection.column + offset))
+          Sentence(style: detection.style, line: index + 1, column: detection.column + offset))
       }
     }
 
@@ -154,9 +147,7 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
   private static let openingBrackets: Set<Character> = ["「", "『", "（", "("]
   private static let closingBrackets: Set<Character> = ["」", "』", "）", ")"]
 
-  private func detectStyle(in line: Substring, inlineCode: InlineCodeRanges)
-    -> (style: DetectedStyle, column: Int)?
-  {
+  private func detectStyle(in line: Substring) -> (style: DetectedStyle, column: Int)? {
     // Ignore trailing whitespace, then trailing punctuation and closing marks.
     var end = line.endIndexIgnoringTrailingSpacesAndTabs
     while end > line.startIndex, Self.trailingCharacters.contains(line[line.index(before: end)]) {
@@ -177,8 +168,6 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
     }
 
     let suffixStart = normalized.index(end, offsetBy: -suffix.count)
-    // A line that ends in inline code says nothing about the style of the prose.
-    guard !inlineCode.contains(suffixStart) else { return nil }
     return (style, line.distance(from: line.startIndex, to: suffixStart) + 1)
   }
 

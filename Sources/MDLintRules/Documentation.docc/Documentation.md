@@ -9,9 +9,11 @@ matching a subset of identifiers. Import this module when you need to reference 
 individual rules directly or when you want to embed the default configuration in your
 own tooling.
 
-Rules that check Japanese prose (identifiers starting with `ja.`) skip fenced and
-indented code blocks as well as inline code spans, both when reporting and when
-fixing. The `md.` rules that look for invisible characters still apply everywhere.
+The rules check prose only, and they do not look for code themselves. The `Linter` in
+`MDLintCore` replaces code blocks, inline code spans, and raw HTML with placeholder
+characters before it hands the text to a rule, both when reporting and when fixing. If
+you call a rule directly, pass it the text of a `MaskedSource` rather than the raw
+Markdown source.
 
 ## Topics
 

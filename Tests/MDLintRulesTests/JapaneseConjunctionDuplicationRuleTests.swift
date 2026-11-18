@@ -108,10 +108,9 @@ struct JapaneseConjunctionDuplicationRuleTests {
   @Test func ignoresConjunctionsInsideCodeBlocks() throws {
     // "しかし" inside the code block is not prose, so the two "そして" are consecutive.
     let content = "そして朝起きた。\n```\nしかし code。\n```\nそして夜に寝た。"
-    let document = Document(parsing: content)
     let rule = JapaneseConjunctionDuplicationRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     let diagnostic = try #require(diagnostics.first)
     #expect(diagnostics.count == 1)
@@ -121,10 +120,9 @@ struct JapaneseConjunctionDuplicationRuleTests {
 
   @Test func doesNotReportConjunctionsThatOnlyAppearInCodeBlocks() {
     let content = "そして朝起きた。\n\n    そして code。\n"
-    let document = Document(parsing: content)
     let rule = JapaneseConjunctionDuplicationRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     #expect(diagnostics.isEmpty)
   }
@@ -132,10 +130,9 @@ struct JapaneseConjunctionDuplicationRuleTests {
   @Test func ignoresConjunctionsInsideInlineCode() throws {
     // "しかし" inside the code span is not prose, so the two "そして" are consecutive.
     let content = "そして朝起きた。値は ` しかし` です。そして夜に寝た。"
-    let document = Document(parsing: content)
     let rule = JapaneseConjunctionDuplicationRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     #expect(diagnostics.count == 1)
     #expect(diagnostics.first?.message.contains("そして") == true)

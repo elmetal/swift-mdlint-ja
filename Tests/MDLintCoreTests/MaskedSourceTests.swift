@@ -69,6 +69,10 @@ struct MaskedSourceTests {
     let quote = mask("> ```\n> code\n> ```\n")
     #expect(!quote.text.contains("code"))
     #expect(quote.text.hasPrefix("> " + String(repeating: block, count: 3) + "\n"))
+
+    let tildeQuote = mask("> ~~~\n> quoted\n> ~~~\n\n本文\n")
+    #expect(!tildeQuote.text.contains("quoted"))
+    #expect(tildeQuote.text.hasSuffix("\n\n本文\n"))
   }
 
   @Test func masksHTMLBlockAndInlineHTML() {
@@ -111,6 +115,13 @@ struct MaskedSourceTests {
       "- 項目 ``multi ` x\n  line`` 後ろ `z` 後ろ\n",
       "- 項目 ◆◆◆◆◆◆◆◆◆◆◆\n◆◆◆◆◆◆◆◆ 後ろ ◆◆◆ 後ろ\n"
     ),
+    (
+      "- 項目 `list\n  続き` です `x`\n  次の `y\n  z` 行\n",
+      "- 項目 ◆◆◆◆◆\n◆◆◆◆◆ です ◆◆◆\n  次の ◆◆\n◆◆◆◆ 行\n"
+    ),
+    ("複数行 `span\r\n続き` です\r\n", "複数行 ◆◆◆◆◆\r\n◆◆◆ です\r\n"),
+    // A continuation line that starts with a tab, which the parser expands.
+    ("本文\n\tタブ `c2` です\n", "本文\n\tタブ ◆◆◆◆ です\n"),
     // The later lines of a paragraph whose first line is indented.
     ("   日本語 `code` です。\n続き `x y` 後ろ\n", "   日本語 ◆◆◆◆◆◆ です。\n続き ◆◆◆◆◆ 後ろ\n"),
     // Escaped pipes in a table cell.
@@ -132,6 +143,27 @@ struct MaskedSourceTests {
   func locatesInlineNodesWithoutTrustingColumns(content: String, expected: String) {
     #expect(picture(content) == expected)
     #expect(mask(content).unmasking(mask(content).text) == content)
+  }
+
+  // After the unclosed "``", the parser only recognizes the first of the code
+  // spans that follow it.
+  @Test(arguments: [
+    ("閉じない ``コード と `a b` と `c d` と `e f` です\n", "閉じない ``コード と ◆◆◆◆◆ と ◆◆◆◆◆ と ◆◆◆◆◆ です\n"),
+    // A longer run is closed by a run of the same length only.
+    ("閉じない ```コード と `a` と ``b ` c`` と `d\n", "閉じない ```コード と ◆◆◆ と ◆◆◆◆◆◆◆◆◆ と `d\n"),
+    // An escaped backtick does not open a span, so the next one does.
+    ("閉じない ``コード と `a` と \\`b` と `c`\n", "閉じない ``コード と ◆◆◆ と \\`b◆◆◆◆◆c`\n"),
+  ])
+  func masksCodeSpansTheParserGivesUpOn(content: String, expected: String) {
+    #expect(picture(content) == expected)
+    #expect(mask(content).unmasking(mask(content).text) == content)
+  }
+
+  @Test func leavesUnpairedBackticksVisible() {
+    // The two backticks are in different list items, so they are not a pair.
+    let content = "これは `テストです\n\n- 一つ目 ` です\n- 二つ目 ` です\n"
+
+    #expect(mask(content).text == content)
   }
 
   @Test func keepsLineAndColumnOfFollowingText() {

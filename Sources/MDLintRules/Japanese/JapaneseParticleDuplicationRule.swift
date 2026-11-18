@@ -5,9 +5,9 @@ import Markdown
 /// A rule that detects back-to-back Japanese particles that are likely accidental duplicates.
 ///
 /// Many typographical mistakes stem from repeating the same particle (for example "にに" or
-/// "をを") when editing text. This rule scans the original Markdown source line by line,
-/// skipping code blocks and inline code spans, and raises a diagnostic whenever it finds the
-/// same particle repeated consecutively, ignoring whitespace between the repetitions.
+/// "をを") when editing text. This rule scans the Markdown source line by line and raises a
+/// diagnostic whenever it finds the same particle repeated consecutively, ignoring whitespace
+/// between the repetitions. The linter hides code and raw HTML before the rule runs.
 public struct JapaneseParticleDuplicationRule: Rule {
   public let id = "ja.particle.no-duplicate"
   public let description = "同じ助詞が続く重複を避けてください。"
@@ -20,24 +20,17 @@ public struct JapaneseParticleDuplicationRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let codeLines = document.codeBlockLineNumbers
-    let inlineCode = document.inlineCodeRanges(in: originalText)
 
-    for (lineNumber, line) in originalText.sourceLines.enumerated()
-    where !codeLines.contains(lineNumber + 1) {
+    for (lineNumber, line) in originalText.sourceLines.enumerated() {
       diagnostics.append(
-        contentsOf: diagnosticsForLine(
-          line,
-          lineNumber: lineNumber + 1,
-          fileURL: fileURL,
-          inlineCode: inlineCode))
+        contentsOf: diagnosticsForLine(line, lineNumber: lineNumber + 1, fileURL: fileURL))
     }
 
     return diagnostics
   }
 
   private func diagnosticsForLine(
-    _ line: Substring, lineNumber: Int, fileURL: URL, inlineCode: InlineCodeRanges
+    _ line: Substring, lineNumber: Int, fileURL: URL
   ) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
 
@@ -47,9 +40,7 @@ public struct JapaneseParticleDuplicationRule: Rule {
       while let foundRange = line[searchRange].firstRange(of: particle) {
         let nextStart = skipSpaces(in: line, from: foundRange.upperBound)
 
-        if nextStart < line.endIndex, line[nextStart...].hasPrefix(particle),
-          !inlineCode.contains(foundRange.lowerBound)
-        {
+        if nextStart < line.endIndex, line[nextStart...].hasPrefix(particle) {
           let column = line.distance(from: line.startIndex, to: foundRange.lowerBound) + 1
           let diagnostic = Diagnostic(
             file: fileURL,

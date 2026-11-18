@@ -31,10 +31,4 @@ struct SourceTextTests {
 
     #expect(text[..<text.endIndexIgnoringTrailingSpacesAndTabs] == "本文")
   }
-
-  @Test func mappingCopiesSkippedLinesVerbatim() {
-    let text = "a\nb\r\nc"
-
-    #expect(text.mappingSourceLines(skipping: [2]) { $0.uppercased() } == "A\nb\r\nC")
-  }
 }

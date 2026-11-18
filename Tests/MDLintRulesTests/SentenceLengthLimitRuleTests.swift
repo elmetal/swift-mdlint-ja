@@ -90,20 +90,30 @@ struct SentenceLengthLimitRuleTests {
     let prose = String(repeating: "あ", count: 60)
     let code = String(repeating: "x", count: 200)
     let content = prose + "\n```\n" + code + "\n```\n" + prose
-    let document = Document(parsing: content)
     let rule = SentenceLengthLimitRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     #expect(diagnostics.isEmpty)
   }
 
-  @Test func reportsCorrectLocationAfterCodeBlock() throws {
-    let content = "```\ncode\n```\n" + String(repeating: "あ", count: 101) + "。"
-    let document = Document(parsing: content)
+  @Test func doesNotCountMarkupAroundACodeBlock() {
+    // Each sentence is exactly 100 characters long, line break included. The
+    // indentation in front of the fence and the line break after the closing
+    // fence belong to the code block, not to the sentences around it.
+    let content =
+      "- " + String(repeating: "あ", count: 97) + "\n  ```\n  code\n  ```\n  "
+      + String(repeating: "い", count: 97) + "\n"
     let rule = SentenceLengthLimitRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    #expect(rule.diagnostics(for: content).isEmpty)
+  }
+
+  @Test func reportsCorrectLocationAfterCodeBlock() throws {
+    let content = "```\ncode\n```\n" + String(repeating: "あ", count: 101) + "。"
+    let rule = SentenceLengthLimitRule()
+
+    let diagnostics = rule.diagnostics(for: content)
 
     let diagnostic = try #require(diagnostics.first)
     #expect(diagnostics.count == 1)
@@ -115,10 +125,9 @@ struct SentenceLengthLimitRuleTests {
     let code = "`" + String(repeating: "x", count: 100) + "`"
     let content =
       String(repeating: "あ", count: 60) + code + String(repeating: "い", count: 30) + "。"
-    let document = Document(parsing: content)
     let rule = SentenceLengthLimitRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     #expect(diagnostics.isEmpty)
   }
@@ -127,10 +136,9 @@ struct SentenceLengthLimitRuleTests {
     // Without the code span being skipped, "?" would split this into two short sentences.
     let content =
       String(repeating: "あ", count: 60) + "`a?b`" + String(repeating: "い", count: 50) + "。"
-    let document = Document(parsing: content)
     let rule = SentenceLengthLimitRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     let diagnostic = try #require(diagnostics.first)
     #expect(diagnostics.count == 1)

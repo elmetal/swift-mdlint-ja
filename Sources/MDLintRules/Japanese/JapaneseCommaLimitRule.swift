@@ -8,7 +8,8 @@ import Markdown
 /// within a sentence and emits a diagnostic when the fourth comma is encountered,
 /// encouraging the author to split or restructure the sentence. A sentence ends at
 /// a terminator such as "。", at a blank line (a paragraph break), or at a code
-/// block; the contents of code blocks and inline code spans are not counted.
+/// or HTML block. The linter hides code and raw HTML before the rule runs, so
+/// their contents are not counted.
 ///
 /// A sentence also ends where the next block begins, so list items, headings, and
 /// table rows that follow each other without a blank line are separate sentences,
@@ -40,9 +41,6 @@ public struct JapaneseCommaLimitRule: Rule {
     var exceedingCommaLine: Int?
     var exceedingCommaColumn: Int?
     var lineIsBlank = true
-    let codeLines = document.codeBlockLineNumbers
-    let inlineCode = document.inlineCodeRanges(in: originalText)
-    var inCodeBlock = codeLines.contains(line)
 
     func endSentence() {
       defer {
@@ -71,31 +69,20 @@ public struct JapaneseCommaLimitRule: Rule {
       diagnostics.append(diagnostic)
     }
 
-    for index in originalText.indices {
-      let character = originalText[index]
-      if inCodeBlock {
-        if character.isLineTerminator {
-          line += 1
-          column = 1
-          inCodeBlock = codeLines.contains(line)
+    // Inline code arrives masked: it stays part of the sentence, but its
+    // placeholders are neither commas nor terminators.
+    for character in originalText {
+      if character == commaCharacter {
+        commaCount += 1
+        if commaCount == maxCommaCount + 1 {
+          limitExceeded = true
+          exceedingCommaLine = line
+          exceedingCommaColumn = column
         }
-        continue
       }
 
-      // Inline code is part of the sentence, but its contents are not prose.
-      if !inlineCode.contains(index) {
-        if character == commaCharacter {
-          commaCount += 1
-          if commaCount == maxCommaCount + 1 {
-            limitExceeded = true
-            exceedingCommaLine = line
-            exceedingCommaColumn = column
-          }
-        }
-
-        if sentenceTerminators.contains(character) {
-          endSentence()
-        }
+      if sentenceTerminators.contains(character) {
+        endSentence()
       }
 
       if character.isLineTerminator {
@@ -107,9 +94,6 @@ public struct JapaneseCommaLimitRule: Rule {
         line += 1
         column = 1
         lineIsBlank = true
-        inCodeBlock = codeLines.contains(line)
-        // A code block interrupts the paragraph it follows.
-        if inCodeBlock { endSentence() }
       } else {
         column += 1
         if !character.isWhitespace { lineIsBlank = false }
