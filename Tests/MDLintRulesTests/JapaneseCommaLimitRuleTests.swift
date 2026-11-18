@@ -78,4 +78,28 @@ struct JapaneseCommaLimitRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func doesNotCountCommasInsideInlineCode() {
+    let content = "これは、`一、二、三、四` と、書きます。"
+    let document = Document(parsing: content)
+    let rule = JapaneseCommaLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
+  @Test func terminatorInsideInlineCodeDoesNotEndTheSentence() throws {
+    // Without the code span being skipped, "!" would split this into two sentences
+    // with two commas each.
+    let content = "一、二、`x != y` 三、四、五。"
+    let document = Document(parsing: content)
+    let rule = JapaneseCommaLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostics.count == 1)
+    #expect(diagnostic.column == 17)
+  }
 }

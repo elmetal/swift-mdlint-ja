@@ -6,8 +6,8 @@ import Markdown
 ///
 /// Japanese writing guidelines generally discourage the use of half-width
 /// Katakana in prose. This rule scans the original Markdown text line by line,
-/// skipping code blocks, and reports diagnostics for any half-width Katakana
-/// characters that it encounters.
+/// skipping code blocks and inline code spans, and reports diagnostics for any
+/// half-width Katakana characters that it encounters.
 public struct HalfwidthKanaRule: Rule {
   public let id = "ja.kana.no-halfwidth"
   public let description = "半角カナは使用しないでください。"
@@ -17,11 +17,14 @@ public struct HalfwidthKanaRule: Rule {
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
     let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
 
     for (lineIndex, line) in originalText.sourceLines.enumerated()
     where !codeLines.contains(lineIndex + 1) {
-      for (columnOffset, scalar) in line.unicodeScalars.enumerated() {
-        if isHalfwidthKana(scalar) {
+      let scalars = line.unicodeScalars
+      for (columnOffset, scalarIndex) in scalars.indices.enumerated() {
+        let scalar = scalars[scalarIndex]
+        if isHalfwidthKana(scalar), !inlineCode.contains(scalarIndex) {
           let column = columnOffset + 1
           let character = String(scalar)
           let diagnostic = Diagnostic(

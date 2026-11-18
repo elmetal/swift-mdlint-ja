@@ -72,4 +72,16 @@ struct JapanesePeriodRuleTests {
       rule.fixing(originalText: content)
         == "本文です。\n\n```bash\n# Install the tool.\n```\n\n    indented code.\n")
   }
+
+  @Test func leavesPeriodInsideInlineCodeAlone() {
+    // The first line ends inside a code span that continues on the next line.
+    let content = "パスは `a.\nb` です.\n"
+    let document = Document(parsing: content)
+    let rule = JapanesePeriodRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.line) == [2])
+    #expect(rule.fixing(originalText: content) == "パスは `a.\nb` です。\n")
+  }
 }

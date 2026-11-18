@@ -8,7 +8,7 @@ import Markdown
 /// within a sentence and emits a diagnostic when the fourth comma is encountered,
 /// encouraging the author to split or restructure the sentence. A sentence ends at
 /// a terminator such as "。", at a blank line (a paragraph break), or at a code
-/// block; the contents of code blocks are not counted.
+/// block; the contents of code blocks and inline code spans are not counted.
 public struct JapaneseCommaLimitRule: Rule {
   public let id = "ja.comma.max-three"
   public let description = "一文に含める読点は3つまでにしてください。"
@@ -34,6 +34,7 @@ public struct JapaneseCommaLimitRule: Rule {
     var exceedingCommaColumn: Int?
     var lineIsBlank = true
     let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
     var inCodeBlock = codeLines.contains(line)
 
     func endSentence() {
@@ -63,7 +64,8 @@ public struct JapaneseCommaLimitRule: Rule {
       diagnostics.append(diagnostic)
     }
 
-    for character in originalText {
+    for index in originalText.indices {
+      let character = originalText[index]
       if inCodeBlock {
         if character.isLineTerminator {
           line += 1
@@ -73,17 +75,20 @@ public struct JapaneseCommaLimitRule: Rule {
         continue
       }
 
-      if character == commaCharacter {
-        commaCount += 1
-        if commaCount == maxCommaCount + 1 {
-          limitExceeded = true
-          exceedingCommaLine = line
-          exceedingCommaColumn = column
+      // Inline code is part of the sentence, but its contents are not prose.
+      if !inlineCode.contains(index) {
+        if character == commaCharacter {
+          commaCount += 1
+          if commaCount == maxCommaCount + 1 {
+            limitExceeded = true
+            exceedingCommaLine = line
+            exceedingCommaColumn = column
+          }
         }
-      }
 
-      if sentenceTerminators.contains(character) {
-        endSentence()
+        if sentenceTerminators.contains(character) {
+          endSentence()
+        }
       }
 
       if character.isLineTerminator {

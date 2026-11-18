@@ -10,8 +10,8 @@ individual rules directly or when you want to embed the default configuration in
 own tooling.
 
 Rules that check Japanese prose (identifiers starting with `ja.`) skip fenced and
-indented code blocks, both when reporting and when fixing. The `md.` rules that look
-for invisible characters still apply everywhere.
+indented code blocks as well as inline code spans, both when reporting and when
+fixing. The `md.` rules that look for invisible characters still apply everywhere.
 
 ## Topics
 

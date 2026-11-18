@@ -64,4 +64,15 @@ struct JapaneseEnglishSpacingRuleTests {
 
     #expect(rule.fixing(originalText: content) == "これはTestです\r\nSwiftを使う\r\n")
   }
+
+  @Test func leavesInlineCodeAlone() {
+    let content = "これは Test と `これは Test です` です"
+    let document = Document(parsing: content)
+    let rule = JapaneseEnglishSpacingRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.column) == [4, 9])
+    #expect(rule.fixing(originalText: content) == "これはTestと `これは Test です` です")
+  }
 }

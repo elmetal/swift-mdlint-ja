@@ -4,7 +4,8 @@ import Markdown
 
 /// A rule that ensures consistent use of politeness styles (ですます調 / である調) in Japanese text.
 ///
-/// The rule scans Markdown lines outside of code blocks, detects whether each sentence
+/// The rule scans Markdown lines outside of code blocks (a line that ends in an inline
+/// code span is not classified by the contents of that span), detects whether each sentence
 /// ends in the polite "ですます" style or the plain "である" style, and raises diagnostics when
 /// sentences using the minority style are found. The preferred style can be supplied via
 /// ``PreferredStyle``; when set to ``PreferredStyle/auto`` the majority style in the document is used.
@@ -37,7 +38,9 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     let sentences = collectSentences(
-      from: originalText, skipping: document.codeBlockLineNumbers)
+      from: originalText,
+      skipping: document.codeBlockLineNumbers,
+      inlineCode: document.inlineCodeRanges(in: originalText))
 
     guard !sentences.isEmpty else { return [] }
 
@@ -97,14 +100,16 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
     }
   }
 
-  private func collectSentences(from text: String, skipping codeLines: Set<Int>) -> [Sentence] {
+  private func collectSentences(
+    from text: String, skipping codeLines: Set<Int>, inlineCode: InlineCodeRanges
+  ) -> [Sentence] {
     var sentences: [Sentence] = []
 
     for (index, line) in text.sourceLines.enumerated() {
       let lineNumber = index + 1
       if codeLines.contains(lineNumber) { continue }
 
-      guard let detection = detectStyle(in: line) else { continue }
+      guard let detection = detectStyle(in: line, inlineCode: inlineCode) else { continue }
 
       sentences.append(Sentence(style: detection.style, line: lineNumber, column: detection.column))
     }
@@ -112,36 +117,35 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
     return sentences
   }
 
-  private func detectStyle(in line: Substring) -> (style: DetectedStyle, column: Int)? {
-    let trimmedRight = String(line[..<line.endIndexIgnoringTrailingSpacesAndTabs])
-    guard !trimmedRight.isEmpty else { return nil }
-
-    var normalized = trimmedRight
-    while let last = normalized.last, Self.trailingCharacters.contains(last) {
-      normalized.removeLast()
+  private func detectStyle(in line: Substring, inlineCode: InlineCodeRanges)
+    -> (style: DetectedStyle, column: Int)?
+  {
+    // Ignore trailing whitespace, then trailing punctuation and closing marks.
+    var end = line.endIndexIgnoringTrailingSpacesAndTabs
+    while end > line.startIndex, Self.trailingCharacters.contains(line[line.index(before: end)]) {
+      end = line.index(before: end)
     }
+    let normalized = line[..<end]
 
     guard !normalized.isEmpty else { return nil }
 
+    let style: DetectedStyle
+    let suffix: String
     if let match = matchSuffix(in: normalized, using: Self.desumasuSuffixes) {
-      guard let column = column(of: match, in: trimmedRight) else { return nil }
-      return (.desumasu, column)
+      (style, suffix) = (.desumasu, match)
+    } else if let match = matchSuffix(in: normalized, using: Self.dearuSuffixes) {
+      (style, suffix) = (.dearu, match)
+    } else {
+      return nil
     }
 
-    if let match = matchSuffix(in: normalized, using: Self.dearuSuffixes) {
-      guard let column = column(of: match, in: trimmedRight) else { return nil }
-      return (.dearu, column)
-    }
-
-    return nil
+    let suffixStart = normalized.index(end, offsetBy: -suffix.count)
+    // A line that ends in inline code says nothing about the style of the prose.
+    guard !inlineCode.contains(suffixStart) else { return nil }
+    return (style, line.distance(from: line.startIndex, to: suffixStart) + 1)
   }
 
-  private func column(of suffix: String, in line: String) -> Int? {
-    guard let range = line.range(of: suffix, options: [.backwards]) else { return nil }
-    return line.distance(from: line.startIndex, to: range.lowerBound) + 1
-  }
-
-  private func matchSuffix(in text: String, using suffixes: [String]) -> String? {
+  private func matchSuffix(in text: Substring, using suffixes: [String]) -> String? {
     for suffix in suffixes {
       if text.hasSuffix(suffix) {
         return suffix

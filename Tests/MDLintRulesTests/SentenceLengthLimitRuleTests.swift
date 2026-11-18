@@ -110,4 +110,32 @@ struct SentenceLengthLimitRuleTests {
     #expect(diagnostic.line == 4)
     #expect(diagnostic.column == 101)
   }
+
+  @Test func doesNotCountInlineCode() {
+    let code = "`" + String(repeating: "x", count: 100) + "`"
+    let content =
+      String(repeating: "あ", count: 60) + code + String(repeating: "い", count: 30) + "。"
+    let document = Document(parsing: content)
+    let rule = SentenceLengthLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
+  @Test func terminatorInsideInlineCodeDoesNotEndTheSentence() throws {
+    // Without the code span being skipped, "?" would split this into two short sentences.
+    let content =
+      String(repeating: "あ", count: 60) + "`a?b`" + String(repeating: "い", count: 50) + "。"
+    let document = Document(parsing: content)
+    let rule = SentenceLengthLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostics.count == 1)
+    // 60 counted characters, 5 skipped for the code span, then the 41st "い".
+    #expect(diagnostic.column == 106)
+    #expect(diagnostic.message.contains("現在の文字数: 111"))
+  }
 }

@@ -5,9 +5,9 @@ import Markdown
 /// A rule that enforces even-length ellipsis characters in Japanese text.
 ///
 /// Japanese typography prefers ellipses rendered as paired "…" characters.
-/// This rule walks each line of Markdown source outside of code blocks,
-/// searching for runs of odd length and recommending an autofix that inserts an
-/// additional ellipsis to reach the closest even count.
+/// This rule walks each line of Markdown source outside of code blocks and
+/// inline code spans, searching for runs of odd length and recommending an
+/// autofix that inserts an additional ellipsis to reach the closest even count.
 public struct JapaneseEllipsisRule: Rule, AutoFixable {
   public let id = "ja.ellipsis.prefer-double"
   public let description = "3点リーダーは「……」に統一してください。"
@@ -17,6 +17,7 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
     let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
     let ellipsis: Character = "…"
 
     for (lineNumber, line) in originalText.sourceLines.enumerated()
@@ -31,7 +32,7 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
             end = line.index(after: end)
           }
 
-          if count % 2 != 0 {
+          if count % 2 != 0, !inlineCode.contains(index) {
             let column = line.distance(from: line.startIndex, to: index) + 1
             let original = String(line[index..<end])
             let replacement = String(repeating: "…", count: count + 1)
@@ -59,7 +60,9 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
 
   public func fixing(originalText: String) -> String {
     let ellipsis: Character = "…"
-    let codeLines = Document(parsing: originalText).codeBlockLineNumbers
+    let document = Document(parsing: originalText)
+    let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
 
     return originalText.mappingSourceLines(skipping: codeLines) { line in
       var newLine = ""
@@ -74,7 +77,8 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
             end = line.index(after: end)
           }
 
-          let replacementCount = count % 2 == 0 ? count : count + 1
+          let isFixable = count % 2 != 0 && !inlineCode.contains(index)
+          let replacementCount = isFixable ? count + 1 : count
           newLine.append(String(repeating: "…", count: replacementCount))
           index = end
         } else {

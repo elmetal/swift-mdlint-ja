@@ -39,4 +39,16 @@ struct HalfwidthKanaRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func ignoresInlineCode() throws {
+    let content = "ﾃ と `ｽﾄ` です"
+    let document = Document(parsing: content)
+    let rule = HalfwidthKanaRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostics.count == 1)
+    #expect(diagnostic.column == 1)
+  }
 }

@@ -68,4 +68,14 @@ struct InlineBacktickClosureRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func acceptsCodeSpansThatContinueOnTheNextLine() {
+    let content = "これは `複数行の\nコード` です"
+    let document = Document(parsing: content)
+    let rule = InlineBacktickClosureRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
 }

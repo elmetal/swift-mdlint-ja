@@ -2,15 +2,16 @@ import Foundation
 import MDLintCore
 import Markdown
 
-/// A rule that enforces a maximum sentence length of 100 characters, excluding URLs.
+/// A rule that enforces a maximum sentence length of 100 characters, excluding URLs
+/// and code.
 ///
 /// Long sentences can reduce readability. This rule counts characters in each sentence
-/// while ignoring URL substrings and reports a diagnostic when the length exceeds 100.
-/// A sentence ends at a terminator such as "。", at a blank line (a paragraph break),
-/// or at a code block; the contents of code blocks are not counted.
+/// while ignoring URL substrings and inline code spans, and reports a diagnostic when the
+/// length exceeds 100. A sentence ends at a terminator such as "。", at a blank line (a
+/// paragraph break), or at a code block; the contents of code blocks are not counted.
 public struct SentenceLengthLimitRule: Rule {
   public let id = "ja.sentence.max-one-hundred-characters"
-  public let description = "URL を除いて一文は100文字以内にしてください。"
+  public let description = "URL とコードを除いて一文は100文字以内にしてください。"
 
   private let sentenceTerminators: Set<Character> = ["。", "！", "？", "!", "?", "．"]
   private let maxLength = 100
@@ -33,6 +34,7 @@ public struct SentenceLengthLimitRule: Rule {
     var exceedingColumn: Int?
     var lineIsBlank = true
     let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
     var inCodeBlock = codeLines.contains(line)
 
     func endSentence() {
@@ -51,7 +53,7 @@ public struct SentenceLengthLimitRule: Rule {
       }
 
       let message =
-        "一文が101文字以上になっています（現在の文字数: \(currentSentenceLength)）。URL を除いて100文字以内に収まるように文を見直してください。"
+        "一文が101文字以上になっています（現在の文字数: \(currentSentenceLength)）。URL とコードを除いて100文字以内に収まるように文を見直してください。"
       let diagnostic = Diagnostic(
         file: fileURL,
         line: diagnosticLine,
@@ -97,7 +99,11 @@ public struct SentenceLengthLimitRule: Rule {
       // sentence that precedes it and is not counted itself.
       let isMaskedBlock = character == MaskedSource.blockPlaceholder
 
-      if !isInURL && !isMaskedBlock {
+      // Inline code is part of the sentence, but its contents are not prose:
+      // they are neither counted nor able to end the sentence.
+      let isInInlineCode = inlineCode.contains(index)
+
+      if !isInURL && !isMaskedBlock && !isInInlineCode {
         currentLength += 1
         if currentLength == maxLength + 1 {
           exceeded = true
@@ -106,7 +112,7 @@ public struct SentenceLengthLimitRule: Rule {
         }
       }
 
-      if isMaskedBlock || sentenceTerminators.contains(character) {
+      if isMaskedBlock || (!isInInlineCode && sentenceTerminators.contains(character)) {
         endSentence()
       }
 

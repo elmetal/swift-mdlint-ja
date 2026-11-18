@@ -6,8 +6,8 @@ import Markdown
 ///
 /// Many typographical mistakes stem from repeating the same particle (for example "にに" or
 /// "をを") when editing text. This rule scans the original Markdown source line by line,
-/// skipping code blocks, and raises a diagnostic whenever it finds the same particle repeated
-/// consecutively, ignoring whitespace between the repetitions.
+/// skipping code blocks and inline code spans, and raises a diagnostic whenever it finds the
+/// same particle repeated consecutively, ignoring whitespace between the repetitions.
 public struct JapaneseParticleDuplicationRule: Rule {
   public let id = "ja.particle.no-duplicate"
   public let description = "同じ助詞が続く重複を避けてください。"
@@ -21,29 +21,35 @@ public struct JapaneseParticleDuplicationRule: Rule {
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
     let codeLines = document.codeBlockLineNumbers
+    let inlineCode = document.inlineCodeRanges(in: originalText)
 
     for (lineNumber, line) in originalText.sourceLines.enumerated()
     where !codeLines.contains(lineNumber + 1) {
       diagnostics.append(
         contentsOf: diagnosticsForLine(
-          String(line),
+          line,
           lineNumber: lineNumber + 1,
-          fileURL: fileURL))
+          fileURL: fileURL,
+          inlineCode: inlineCode))
     }
 
     return diagnostics
   }
 
-  private func diagnosticsForLine(_ line: String, lineNumber: Int, fileURL: URL) -> [Diagnostic] {
+  private func diagnosticsForLine(
+    _ line: Substring, lineNumber: Int, fileURL: URL, inlineCode: InlineCodeRanges
+  ) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
 
     for particle in particles {
       var searchRange = line.startIndex..<line.endIndex
 
-      while let foundRange = line.range(of: particle, options: [], range: searchRange) {
+      while let foundRange = line[searchRange].firstRange(of: particle) {
         let nextStart = skipSpaces(in: line, from: foundRange.upperBound)
 
-        if nextStart < line.endIndex, line[nextStart...].hasPrefix(particle) {
+        if nextStart < line.endIndex, line[nextStart...].hasPrefix(particle),
+          !inlineCode.contains(foundRange.lowerBound)
+        {
           let column = line.distance(from: line.startIndex, to: foundRange.lowerBound) + 1
           let diagnostic = Diagnostic(
             file: fileURL,
@@ -68,7 +74,7 @@ public struct JapaneseParticleDuplicationRule: Rule {
     return diagnostics
   }
 
-  private func skipSpaces(in line: String, from index: String.Index) -> String.Index {
+  private func skipSpaces(in line: Substring, from index: String.Index) -> String.Index {
     var current = index
     while current < line.endIndex {
       let character = line[current]

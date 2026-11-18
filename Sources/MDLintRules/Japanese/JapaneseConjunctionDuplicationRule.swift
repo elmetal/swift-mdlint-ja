@@ -5,7 +5,8 @@ import Markdown
 /// A rule that detects back-to-back Japanese conjunctions.
 ///
 /// Consecutive conjunctions such as "しかし、しかし" make prose feel redundant
-/// and disrupt the flow of a sentence. This rule walks through each sentence,
+/// and disrupt the flow of a sentence. This rule walks through each sentence
+/// outside of code blocks and inline code spans,
 /// records the first conjunction it encounters, and reports a diagnostic when
 /// the same conjunction appears at the beginning of the next sentence.
 ///
@@ -33,12 +34,16 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
+    let inlineCode = document.inlineCodeRanges(in: originalText)
     let sentenceRanges = self.sentenceRanges(
-      in: originalText, skipping: document.codeBlockLineNumbers)
+      in: originalText, skipping: document.codeBlockLineNumbers, inlineCode: inlineCode)
     var lastConjunction: ConjunctionOccurrence?
 
     for range in sentenceRanges {
-      guard let occurrence = firstConjunction(in: originalText, sentenceRange: range) else {
+      guard
+        let occurrence = firstConjunction(
+          in: originalText, sentenceRange: range, inlineCode: inlineCode)
+      else {
         continue
       }
 
@@ -64,10 +69,11 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
 
   /// Splits the text into sentences, leaving out the lines of code blocks.
   ///
-  /// A code block also ends the sentence that precedes it.
-  private func sentenceRanges(in text: String, skipping codeLines: Set<Int>)
-    -> [Range<String.Index>]
-  {
+  /// A code block also ends the sentence that precedes it. A terminator inside
+  /// an inline code span does not end a sentence.
+  private func sentenceRanges(
+    in text: String, skipping codeLines: Set<Int>, inlineCode: InlineCodeRanges
+  ) -> [Range<String.Index>] {
     var ranges: [Range<String.Index>] = []
     var start = text.startIndex
     var index = start
@@ -95,7 +101,9 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
           start = nextIndex
         }
         inCodeBlock = nextLineIsCode
-      } else if !inCodeBlock, sentenceTerminators.contains(character) {
+      } else if !inCodeBlock, sentenceTerminators.contains(character),
+        !inlineCode.contains(index)
+      {
         endSentence(at: nextIndex)
         start = nextIndex
       }
@@ -120,15 +128,17 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
     return false
   }
 
-  private func firstConjunction(in text: String, sentenceRange: Range<String.Index>)
-    -> ConjunctionOccurrence?
-  {
+  private func firstConjunction(
+    in text: String, sentenceRange: Range<String.Index>, inlineCode: InlineCodeRanges
+  ) -> ConjunctionOccurrence? {
     var best: ConjunctionOccurrence?
 
     for conjunction in conjunctions {
       var searchRange = sentenceRange
       while let foundRange = text.range(of: conjunction, options: [], range: searchRange) {
-        if isValidBoundary(in: text, for: foundRange, sentenceRange: sentenceRange) {
+        if isValidBoundary(in: text, for: foundRange, sentenceRange: sentenceRange),
+          !inlineCode.contains(foundRange.lowerBound)
+        {
           if let currentBest = best {
             // Prefer the earliest match; at the same position prefer the longest one
             // so that "それでも" is not mistaken for "それで".
