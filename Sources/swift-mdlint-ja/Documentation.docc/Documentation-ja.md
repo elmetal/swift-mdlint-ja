@@ -1,4 +1,4 @@
-# swift-mdlint-ja-jp
+# swift-mdlint-ja（日本語）
 
 ## Overview
 
