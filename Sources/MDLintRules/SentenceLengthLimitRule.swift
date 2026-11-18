@@ -88,7 +88,7 @@ public struct SentenceLengthLimitRule: Rule {
         exceedingColumn = nil
       }
 
-      if character == "\n" {
+      if character.isLineTerminator {
         line += 1
         column = 1
       } else {

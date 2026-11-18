@@ -37,4 +37,15 @@ struct JapanesePeriodRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func handlesWindowsLineEndings() {
+    let content = "一行目.\r\n二行目。\r\n"
+    let document = Document(parsing: content)
+    let rule = JapanesePeriodRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.line) == [1])
+    #expect(rule.fixing(originalText: content) == "一行目。\r\n二行目。\r\n")
+  }
 }

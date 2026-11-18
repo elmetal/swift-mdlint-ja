@@ -97,13 +97,11 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
   }
 
   private func collectSentences(from text: String) -> [Sentence] {
-    let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
     var sentences: [Sentence] = []
     var inCodeBlock = false
 
-    for (index, lineSubstring) in lines.enumerated() {
+    for (index, line) in text.sourceLines.enumerated() {
       let lineNumber = index + 1
-      let line = String(lineSubstring)
       let trimmedLeading = line.trimmingCharacters(in: .whitespaces)
 
       if trimmedLeading.hasPrefix("```") {
@@ -121,8 +119,8 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
     return sentences
   }
 
-  private func detectStyle(in line: String) -> (style: DetectedStyle, column: Int)? {
-    let trimmedRight = line.rstripSpacesAndTabs()
+  private func detectStyle(in line: Substring) -> (style: DetectedStyle, column: Int)? {
+    let trimmedRight = String(line[..<line.endIndexIgnoringTrailingSpacesAndTabs])
     guard !trimmedRight.isEmpty else { return nil }
 
     var normalized = trimmedRight
@@ -181,14 +179,4 @@ public struct JapanesePolitenessStyleConsistencyRule: Rule {
     ]
     return suffixes.sorted { $0.count > $1.count }
   }()
-}
-
-extension String {
-  fileprivate func rstripSpacesAndTabs() -> String {
-    var result = self
-    while let last = result.last, last == " " || last == "\t" {
-      result.removeLast()
-    }
-    return result
-  }
 }
