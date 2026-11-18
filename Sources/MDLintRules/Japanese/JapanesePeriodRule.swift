@@ -19,7 +19,7 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
     let text = originalText
 
     // 単純化: 行単位で見る。末尾の "." または "．" を検出（コードブロックは除外したいが最小構成のため簡略化）
-    let lines = text.components(separatedBy: "\n")
+    let lines = text.sourceLines
     var offset = 0
     for (i, line) in lines.enumerated() {
       let trimmed = line.trimmingCharacters(in: .whitespaces)
@@ -41,9 +41,8 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
   }
 
   public func fixing(originalText: String) -> String {
-    var lines = originalText.components(separatedBy: "\n")
-    for i in lines.indices {
-      let line = lines[i]
+    originalText.mappingSourceLines { lineSubstring in
+      let line = String(lineSubstring)
       if line.trimmingCharacters(in: .whitespaces).hasSuffix(".")
         || line.trimmingCharacters(in: .whitespaces).hasSuffix("．")
       {
@@ -54,11 +53,11 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
           let dropCount = 1
           let new = String(rtrimmed.dropLast(dropCount)) + "。"
           let suffixSpaces = String(line.dropFirst(rtrimmed.count))
-          lines[i] = new + suffixSpaces
+          return new + suffixSpaces
         }
       }
+      return line
     }
-    return lines.joined(separator: "\n")
   }
 }
 

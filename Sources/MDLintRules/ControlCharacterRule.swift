@@ -8,6 +8,10 @@ import Markdown
 /// invisible copy-and-paste artifacts. Because they do not render in the
 /// output and may cause issues in downstream tooling, this rule reports each
 /// occurrence and offers to remove them.
+///
+/// Only the Unicode general category `Cc` is targeted (tab and line
+/// terminators excepted). Format characters (`Cf`) such as the zero-width
+/// joiner are left alone because emoji sequences depend on them.
 public struct ControlCharacterRule: Rule, AutoFixable {
   public let id = "md.characters.no-control"
   public let description = "制御文字を含めないでください。"
@@ -16,11 +20,9 @@ public struct ControlCharacterRule: Rule, AutoFixable {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let lines = originalText.components(separatedBy: "\n")
-
-    for (lineIndex, line) in lines.enumerated() {
+    for (lineIndex, line) in originalText.sourceLines.enumerated() {
       for (columnOffset, scalar) in line.unicodeScalars.enumerated()
-      where CharacterSet.disallowedControl.contains(scalar) {
+      where Self.isDisallowedControl(scalar) {
         let column = columnOffset + 1
         let codePoint = String(format: "U+%04X", scalar.value)
         let diagnostic = Diagnostic(
@@ -40,14 +42,14 @@ public struct ControlCharacterRule: Rule, AutoFixable {
   }
 
   public func fixing(originalText: String) -> String {
-    originalText.components(separatedBy: .disallowedControl).joined()
+    var scalars = String.UnicodeScalarView()
+    scalars.append(
+      contentsOf: originalText.unicodeScalars.lazy.filter { !Self.isDisallowedControl($0) })
+    return String(scalars)
   }
-}
 
-extension CharacterSet {
-  static let disallowedControl: Self = {
-    var set = CharacterSet.controlCharacters
-    set.remove(charactersIn: "\n\r\t")
-    return set
-  }()
+  private static func isDisallowedControl(_ scalar: Unicode.Scalar) -> Bool {
+    scalar.properties.generalCategory == .control
+      && scalar != "\n" && scalar != "\r" && scalar != "\t"
+  }
 }

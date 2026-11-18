@@ -89,4 +89,16 @@ struct JapanesePolitenessStyleConsistencyRuleTests {
 
     #expect(diagnostics.isEmpty)
   }
+
+  @Test func handlesWindowsLineEndings() throws {
+    let content = "これはテストです。\r\nこの文も丁寧語です。\r\nこれは事実である。\r\n"
+    let document = Document(parsing: content)
+    let rule = JapanesePolitenessStyleConsistencyRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostics.count == 1)
+    #expect(diagnostic.line == 3)
+  }
 }

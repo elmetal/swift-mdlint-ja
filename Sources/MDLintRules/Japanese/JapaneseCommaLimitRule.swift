@@ -67,7 +67,7 @@ public struct JapaneseCommaLimitRule: Rule {
         exceedingCommaColumn = nil
       }
 
-      if character == "\n" {
+      if character.isLineTerminator {
         line += 1
         column = 1
       } else {
