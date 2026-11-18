@@ -6,6 +6,7 @@ import Markdown
 ///
 /// Long sentences can reduce readability. This rule counts characters in each sentence
 /// while ignoring URL substrings and reports a diagnostic when the length exceeds 100.
+/// A sentence ends at a terminator such as "。" or at a blank line (a paragraph break).
 public struct SentenceLengthLimitRule: Rule {
   public let id = "ja.sentence.max-one-hundred-characters"
   public let description = "URL を除いて一文は100文字以内にしてください。"
@@ -29,8 +30,16 @@ public struct SentenceLengthLimitRule: Rule {
     var exceeded = false
     var exceedingLine: Int?
     var exceedingColumn: Int?
+    var lineIsBlank = true
 
-    func emitDiagnosticIfNeeded(currentSentenceLength: Int) {
+    func endSentence() {
+      let currentSentenceLength = currentLength
+      defer {
+        currentLength = 0
+        exceeded = false
+        exceedingLine = nil
+        exceedingColumn = nil
+      }
       guard exceeded,
         let diagnosticLine = exceedingLine,
         let diagnosticColumn = exceedingColumn
@@ -85,24 +94,24 @@ public struct SentenceLengthLimitRule: Rule {
       }
 
       if isMaskedBlock || sentenceTerminators.contains(character) {
-        emitDiagnosticIfNeeded(currentSentenceLength: currentLength)
-        currentLength = 0
-        exceeded = false
-        exceedingLine = nil
-        exceedingColumn = nil
+        endSentence()
       }
 
       if character.isLineTerminator {
+        // A blank line separates paragraphs, so no sentence continues across it.
+        if lineIsBlank { endSentence() }
         line += 1
         column = 1
+        lineIsBlank = true
       } else {
         column += 1
+        if !character.isWhitespace { lineIsBlank = false }
       }
 
       index = nextIndex
     }
 
-    emitDiagnosticIfNeeded(currentSentenceLength: currentLength)
+    endSentence()
 
     return diagnostics
   }

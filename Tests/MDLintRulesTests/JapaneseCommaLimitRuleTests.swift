@@ -56,4 +56,14 @@ struct JapaneseCommaLimitRuleTests {
     #expect(diagnostic.line == 3)
     #expect(diagnostic.column == 16)
   }
+
+  @Test func doesNotCountCommasAcrossParagraphs() {
+    let content = "項目A、項目B\n\n項目C、項目D\n\n項目E、項目F\n\n項目G、項目H"
+    let document = Document(parsing: content)
+    let rule = JapaneseCommaLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
 }
