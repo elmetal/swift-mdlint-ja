@@ -22,8 +22,9 @@ public struct Diagnostic: Codable, Hashable {
   ///
   /// - Parameters:
   ///   - file: The file URL of the Markdown document that produced the diagnostic.
-  ///   - line: The line number where the lint rule detected the issue.
-  ///   - column: The column number of the issue's starting location.
+  ///   - line: The 1-based line number where the lint rule detected the issue.
+  ///   - column: The 1-based column number of the issue's starting location, counted in
+  ///     characters (grapheme clusters) from the start of the line.
   ///   - ruleID: The identifier of the lint rule that emitted the diagnostic.
   ///   - message: A human-readable description of the problem.
   ///   - severity: The severity classification for the diagnostic. The default value is ``Severity/warning``.

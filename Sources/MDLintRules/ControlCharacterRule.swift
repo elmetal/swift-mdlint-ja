@@ -21,20 +21,21 @@ public struct ControlCharacterRule: Rule, AutoFixable {
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
     for (lineIndex, line) in originalText.sourceLines.enumerated() {
-      for (columnOffset, scalar) in line.unicodeScalars.enumerated()
-      where Self.isDisallowedControl(scalar) {
-        let column = columnOffset + 1
-        let codePoint = String(format: "U+%04X", scalar.value)
-        let diagnostic = Diagnostic(
-          file: fileURL,
-          line: lineIndex + 1,
-          column: column,
-          ruleID: id,
-          message: "制御文字 (\(codePoint)) を削除してください。",
-          severity: .warning,
-          fixIt: "制御文字を削除"
-        )
-        diagnostics.append(diagnostic)
+      // Columns count characters, as in every other rule, not Unicode scalars.
+      for (columnOffset, character) in line.enumerated() {
+        for scalar in character.unicodeScalars where Self.isDisallowedControl(scalar) {
+          let codePoint = String(format: "U+%04X", scalar.value)
+          let diagnostic = Diagnostic(
+            file: fileURL,
+            line: lineIndex + 1,
+            column: columnOffset + 1,
+            ruleID: id,
+            message: "制御文字 (\(codePoint)) を削除してください。",
+            severity: .warning,
+            fixIt: "制御文字を削除"
+          )
+          diagnostics.append(diagnostic)
+        }
       }
     }
 

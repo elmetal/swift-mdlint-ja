@@ -25,6 +25,17 @@ struct ControlCharacterRuleTests {
     #expect(diagnostic.message.contains("U+0001"))
   }
 
+  @Test func countsColumnsInCharacters() {
+    // The family emoji is one character made of five scalars.
+    let content = "家族👨\u{200D}👩\u{200D}👧\u{0001}です\u{0002}"
+    let document = Document(parsing: content)
+    let rule = ControlCharacterRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.map(\.column) == [4, 7])
+  }
+
   @Test func fixRemovesControlCharacters() {
     let content = "テキスト\u{0007}と\u{0002}改行\n次の行"
     let rule = ControlCharacterRule()

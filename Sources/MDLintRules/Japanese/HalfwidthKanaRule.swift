@@ -21,12 +21,14 @@ public struct HalfwidthKanaRule: Rule {
 
     for (lineIndex, line) in originalText.sourceLines.enumerated()
     where !codeLines.contains(lineIndex + 1) {
-      let scalars = line.unicodeScalars
-      for (columnOffset, scalarIndex) in scalars.indices.enumerated() {
-        let scalar = scalars[scalarIndex]
-        if isHalfwidthKana(scalar), !inlineCode.contains(scalarIndex) {
+      // Columns count characters, as in every other rule. A kana and its half-width
+      // voiced sound mark, as in "ｶﾞ", form one character and are reported once.
+      for (columnOffset, characterIndex) in line.indices.enumerated() {
+        let character = line[characterIndex]
+        if character.unicodeScalars.contains(where: isHalfwidthKana),
+          !inlineCode.contains(characterIndex)
+        {
           let column = columnOffset + 1
-          let character = String(scalar)
           let diagnostic = Diagnostic(
             file: fileURL,
             line: lineIndex + 1,
