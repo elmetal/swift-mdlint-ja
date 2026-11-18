@@ -23,7 +23,8 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
 
   private let sentenceTerminators: Set<Character> = [".", "．", "。", "?", "!", "？", "！"]
   private let allowedLeadingCharacters: Set<Character> = [
-    " ", "\t", "\n", "\r", "　", "\u{3000}", "、", "。", "．", ",", ".", "!", "?", "！", "？", "・",
+    " ", "\t", "\n", "\r", "\r\n", "　", "\u{3000}", "、", "。", "．", ",", ".", "!", "?", "！", "？",
+    "・",
     "-", "—", "―", "〜", "ー", "・", "\u{FF65}", "\u{30FB}", "\u{FF0C}", "\u{3001}",
     "(", ")", "[", "]", "{", "}", "<", ">", "「", "」", "『", "』", "（", "）", "［", "］",
     "【", "】", "〈", "〉", "《", "》", "：", ";", "；", "“", "”", "'", "\"",
@@ -42,7 +43,7 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
       }
 
       if let previous = lastConjunction, previous.conjunction == occurrence.conjunction {
-        let (line, column) = lineAndColumn(in: originalText, at: occurrence.range.lowerBound)
+        let (line, column) = originalText.lineAndColumn(of: occurrence.range.lowerBound)
         let diagnostic = Diagnostic(
           file: fileURL,
           line: line,
@@ -136,24 +137,6 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
       }
     }
     return true
-  }
-
-  private func lineAndColumn(in text: String, at index: String.Index) -> (Int, Int) {
-    var line = 1
-    var column = 1
-    var current = text.startIndex
-
-    while current < index {
-      if text[current] == "\n" {
-        line += 1
-        column = 1
-      } else {
-        column += 1
-      }
-      current = text.index(after: current)
-    }
-
-    return (line, column)
   }
 
   private struct ConjunctionOccurrence {

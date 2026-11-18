@@ -61,4 +61,16 @@ struct SentenceLengthLimitRuleTests {
     #expect(diagnostic.line == 1)
     #expect(diagnostic.column == firstSentence.count + 101)
   }
+
+  @Test func reportsCorrectLineWithWindowsLineEndings() throws {
+    let content = "短い文です。\r\n\r\n" + String(repeating: "あ", count: 101) + "。\r\n"
+    let document = Document(parsing: content)
+    let rule = SentenceLengthLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostics.count == 1)
+    #expect(diagnostic.line == 3)
+  }
 }

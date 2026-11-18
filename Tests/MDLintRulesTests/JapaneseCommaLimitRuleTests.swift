@@ -43,4 +43,17 @@ struct JapaneseCommaLimitRuleTests {
     #expect(diagnostic.line == 1)
     #expect(diagnostic.column == 16)
   }
+
+  @Test func reportsCorrectLineWithWindowsLineEndings() throws {
+    let content = "# 見出し\r\n\r\nこれは、テストで、例で、確認で、検証です。\r\n"
+    let document = Document(parsing: content)
+    let rule = JapaneseCommaLimitRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostics.count == 1)
+    #expect(diagnostic.line == 3)
+    #expect(diagnostic.column == 16)
+  }
 }
