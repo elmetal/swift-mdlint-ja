@@ -16,7 +16,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout target branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch }}
 
@@ -39,5 +39,7 @@ jobs:
 
       - name: Push changes
         if: success()
+        env:
+          BRANCH: ${{ inputs.branch }}
         run: |
-          git push origin HEAD:${{ inputs.branch }}
+          git push origin "HEAD:$BRANCH"
