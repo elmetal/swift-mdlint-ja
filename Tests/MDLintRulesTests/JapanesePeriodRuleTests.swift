@@ -38,6 +38,17 @@ struct JapanesePeriodRuleTests {
     #expect(diagnostics.isEmpty)
   }
 
+  @Test func reportsColumnOfThePeriodIgnoringTrailingSpaces() throws {
+    let content = "これはテスト.  "
+    let document = Document(parsing: content)
+    let rule = JapanesePeriodRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    let diagnostic = try #require(diagnostics.first)
+    #expect(diagnostic.column == 7)
+  }
+
   @Test func handlesWindowsLineEndings() {
     let content = "一行目.\r\n二行目。\r\n"
     let document = Document(parsing: content)

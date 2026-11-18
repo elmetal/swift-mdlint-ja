@@ -16,57 +16,35 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var out: [Diagnostic] = []
-    let text = originalText
 
     // 単純化: 行単位で見る。末尾の "." または "．" を検出（コードブロックは Linter 側でマスク済み）
-    let lines = text.sourceLines
-    var offset = 0
-    for (i, line) in lines.enumerated() {
-      let trimmed = line.trimmingCharacters(in: .whitespaces)
-      if trimmed.hasSuffix(".") || trimmed.hasSuffix("．") {
-        let column = line.count
-        let d = Diagnostic(
-          file: fileURL,
-          line: i + 1,
-          column: column,
-          ruleID: id,
-          message: "文末は「。」に統一しましょう（現在: \(trimmed.suffix(1))）。",
-          severity: .warning,
-          fixIt: "末尾の \(trimmed.suffix(1)) を「。」に置換")
-        out.append(d)
-      }
-      offset += line.utf16.count + 1
+    for (i, line) in originalText.sourceLines.enumerated() {
+      guard let index = Self.terminalPeriodIndex(in: line) else { continue }
+      let period = line[index]
+      let d = Diagnostic(
+        file: fileURL,
+        line: i + 1,
+        column: line.distance(from: line.startIndex, to: index) + 1,
+        ruleID: id,
+        message: "文末は「。」に統一しましょう（現在: \(period)）。",
+        severity: .warning,
+        fixIt: "末尾の \(period) を「。」に置換")
+      out.append(d)
     }
     return out
   }
 
   public func fixing(originalText: String) -> String {
-    originalText.mappingSourceLines { lineSubstring in
-      let line = String(lineSubstring)
-      if line.trimmingCharacters(in: .whitespaces).hasSuffix(".")
-        || line.trimmingCharacters(in: .whitespaces).hasSuffix("．")
-      {
-        // 行末の "."/ "．" を "。" に
-        // 末尾の空白を保持しつつ置換
-        let rtrimmed = line.rstripSpaces()
-        if rtrimmed.hasSuffix(".") || rtrimmed.hasSuffix("．") {
-          let dropCount = 1
-          let new = String(rtrimmed.dropLast(dropCount)) + "。"
-          let suffixSpaces = String(line.dropFirst(rtrimmed.count))
-          return new + suffixSpaces
-        }
-      }
-      return line
+    originalText.mappingSourceLines { line in
+      guard let index = Self.terminalPeriodIndex(in: line) else { return String(line) }
+      // 行末の "."/ "．" を "。" に置換し、後続の空白は保持する
+      return line[..<index] + "。" + line[line.index(after: index)...]
     }
   }
-}
 
-extension String {
-  fileprivate func rstripSpaces() -> String {
-    var s = self
-    while s.last == " " || s.last == "\t" {
-      s.removeLast()
-    }
-    return s
+  /// Returns the index of a "." or "．" that ends the line, ignoring trailing whitespace.
+  private static func terminalPeriodIndex(in line: Substring) -> String.Index? {
+    guard let index = line.lastIndex(where: { !$0.isWhitespace }) else { return nil }
+    return line[index] == "." || line[index] == "．" ? index : nil
   }
 }
