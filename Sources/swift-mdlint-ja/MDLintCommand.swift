@@ -63,7 +63,7 @@ struct MDLintCommand: ParsableCommand {
     }
 
     let linter = Linter(rules: rules)
-    let urls = resolveTargets(paths: paths)
+    let (urls, missingPaths) = resolveTargets(paths: paths)
 
     var allDiagnostics: [Diagnostic] = []
 
@@ -88,7 +88,11 @@ struct MDLintCommand: ParsableCommand {
     }
 
     if allDiagnostics.isEmpty {
-      print("✨ No rule violations found.")
+      // Not everything that was asked for was linted when a path is missing,
+      // so the run cannot claim that there are no violations.
+      if missingPaths.isEmpty {
+        print("✨ No rule violations found.")
+      }
     } else {
       for diagnostic in allDiagnostics.sorted(by: Diagnostic.sorter) {
         switch format {
@@ -98,14 +102,26 @@ struct MDLintCommand: ParsableCommand {
       }
     }
 
+    // A path that does not exist is most likely a typo. The remaining paths
+    // are still linted and reported above, but the run fails so that a
+    // mistyped path in a CI job does not pass silently.
+    if !missingPaths.isEmpty {
+      throw ExitCode.failure
+    }
+
     if strict && !allDiagnostics.isEmpty {
       throw ExitCode(2)
     }
   }
 
-  private func resolveTargets(paths: [String]) -> [URL] {
+  /// Collects the Markdown files to lint.
+  ///
+  /// - Returns: The files, and the arguments that name neither a file nor a
+  ///   directory.
+  private func resolveTargets(paths: [String]) -> (urls: [URL], missingPaths: [String]) {
     let fm = FileManager.default
     var urls: [URL] = []
+    var missingPaths: [String] = []
     var seenPaths: Set<String> = []
 
     func add(_ url: URL) {
@@ -121,7 +137,8 @@ struct MDLintCommand: ParsableCommand {
       let input = URL(fileURLWithPath: path)
       var isDir: ObjCBool = false
       guard fm.fileExists(atPath: input.path, isDirectory: &isDir) else {
-        Self.warn("Skipping \(path): no such file or directory")
+        Self.reportError("\(path): no such file or directory")
+        missingPaths.append(path)
         continue
       }
 
@@ -139,11 +156,15 @@ struct MDLintCommand: ParsableCommand {
         add(input)
       }
     }
-    return urls
+    return (urls, missingPaths)
   }
 
   private static func warn(_ message: String) {
     FileHandle.standardError.write(Data("warning: \(message)\n".utf8))
+  }
+
+  private static func reportError(_ message: String) {
+    FileHandle.standardError.write(Data("error: \(message)\n".utf8))
   }
 }
 

@@ -12,7 +12,7 @@ When the command starts it creates a `RuleConfigurationLoader`. The loader reads
 
 ## Resolving inputs
 
-If no paths are provided, the current working directory is scanned. Otherwise, each path is resolved and any Markdown file (`.md`) is collected. Directories are traversed recursively to make sure nested documentation is linted alongside individual files that are explicitly specified; hidden files and directories such as `.build` or `.git` are skipped during traversal. A file reached through several arguments is linted once, and paths that do not exist or cannot be read as UTF-8 are skipped with a warning on standard error.
+If no paths are provided, the current working directory is scanned. Otherwise, each path is resolved and any Markdown file (`.md`) is collected. Directories are traversed recursively to make sure nested documentation is linted alongside individual files that are explicitly specified; hidden files and directories such as `.build` or `.git` are skipped during traversal. A file reached through several arguments is linted once. A file that cannot be read as UTF-8 is skipped with a warning on standard error. A path that does not exist is reported as an error on standard error; the remaining paths are still linted, and the process then exits with status code `1`.
 
 ## Running the linter
 
@@ -37,4 +37,4 @@ Diagnostics are sorted for stable output before being printed. Two output format
 - `text`: a human-readable listing that mirrors common command-line linters.
 - `gha`: a format tailored for GitHub Actions so annotations appear directly in workflow logs.
 
-When the `--strict` flag is supplied the process exits with status code `2` if any diagnostics were emitted, allowing continuous integration pipelines to fail the build on lint violations.
+When the `--strict` flag is supplied the process exits with status code `2` if any diagnostics were emitted, allowing continuous integration pipelines to fail the build on lint violations. A path that does not exist makes the process exit with status code `1`, with or without `--strict`.

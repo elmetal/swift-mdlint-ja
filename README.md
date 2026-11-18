@@ -29,7 +29,7 @@ Key options:
 - `--config <path>`: Load a JSON file that lists the rule identifiers to enable.
 - `--politeness-style <auto|desumasu|dearu>`: Control how the politeness-style consistency rule resolves conflicts.
 
-When no paths are provided the linter scans the current directory recursively for files with the `.md` extension. Hidden files and directories (such as `.build` or `.git`) are skipped while scanning directories.
+When no paths are provided the linter scans the current directory recursively for files with the `.md` extension. Hidden files and directories (such as `.build` or `.git`) are skipped while scanning directories. A path that does not exist is reported as an error: the remaining paths are still linted, and the command exits with status code `1`.
 
 Code blocks, inline code, and raw HTML are excluded from both the checks and `--fix`.
 

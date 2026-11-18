@@ -35,6 +35,8 @@ Key options include:
 - `--config <path>`: Load a JSON file that lists rule identifiers to enable.
 - `--politeness-style <auto|desumasu|dearu>`: Choose the style that the politeness-style consistency rule enforces (`auto` follows the majority style of each document).
 
+A path that does not exist is reported as an error. The remaining paths are still linted, and the command then exits with code `1`.
+
 ## Configuration
 
 Configuration files express an array of rule identifiers in JSON. Unknown identifiers are reported as warnings on standard error and ignored.
