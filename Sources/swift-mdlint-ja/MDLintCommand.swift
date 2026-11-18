@@ -86,6 +86,14 @@ struct MDLintCommand: ParsableCommand {
   private func resolveTargets(paths: [String]) -> [URL] {
     let fm = FileManager.default
     var urls: [URL] = []
+    var seenPaths: Set<String> = []
+
+    func add(_ url: URL) {
+      // The same file can be reached through several arguments (`. README.md`).
+      if seenPaths.insert(url.standardizedFileURL.path).inserted {
+        urls.append(url)
+      }
+    }
 
     let inputs: [URL]
     if paths.isEmpty {
@@ -104,11 +112,11 @@ struct MDLintCommand: ParsableCommand {
             at: input, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
           while let file = enumerator?.nextObject() as? URL {
             if file.pathExtension.lowercased() == "md" {
-              urls.append(file)
+              add(file)
             }
           }
         } else if input.pathExtension.lowercased() == "md" {
-          urls.append(input)
+          add(input)
         }
       }
     }

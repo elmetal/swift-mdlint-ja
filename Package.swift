@@ -47,6 +47,10 @@ let package = Package(
       ]
     ),
     .testTarget(
+      name: "MDLintCommandTests",
+      dependencies: ["swift-mdlint-ja"]
+    ),
+    .testTarget(
       name: "MDLintCoreTests",
       dependencies: [
         "MDLintCore",
