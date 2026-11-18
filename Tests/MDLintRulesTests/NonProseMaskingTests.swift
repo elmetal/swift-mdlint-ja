@@ -126,12 +126,28 @@ struct NonProseMaskingTests {
     #expect(diagnostics(for: content).isEmpty)
   }
 
-  @Test func inlineCodeCountsTowardSentenceLength() throws {
+  @Test func inlineCodeDoesNotCountTowardSentenceLength() {
+    // 98 characters of prose; the code span would bring the sentence to 108.
     let content = String(repeating: "あ", count: 95) + "`abcdefgh`です。\n"
 
-    let diagnostics = diagnostics(for: content)
+    #expect(diagnostics(for: content).isEmpty)
+  }
 
-    #expect(diagnostics.map(\.ruleID) == ["ja.sentence.max-one-hundred-characters"])
+  @Test func inlineHTMLDoesNotCountTowardSentenceLength() {
+    // 98 characters of prose; the tags would bring the sentence to 105.
+    let content = String(repeating: "あ", count: 93) + "<b>強調</b>です。\n"
+
+    #expect(diagnostics(for: content).isEmpty)
+  }
+
+  @Test func proseAroundInlineCodeStillCountsTowardSentenceLength() throws {
+    // 101 characters of prose once the code span is left out.
+    let content = String(repeating: "あ", count: 98) + "`abcdefgh`です。\n"
+
+    let diagnostic = try #require(diagnostics(for: content).first)
+
+    #expect(diagnostic.ruleID == "ja.sentence.max-one-hundred-characters")
+    #expect(diagnostic.message.contains("現在の文字数: 101"))
   }
 
   @Test func fixesLeavePlaceholdersInPlace() {

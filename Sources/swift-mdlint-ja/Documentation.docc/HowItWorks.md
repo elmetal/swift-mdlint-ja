@@ -28,6 +28,8 @@ Rules check prose only. Before running the rules, the linter parses the file and
 
 Each hidden character becomes exactly one placeholder, so reported line and column numbers still match the file. The same masked text is handed to the automatic fixes, and the hidden regions are restored afterwards, which means `--fix` never rewrites code or HTML. Link destinations and front matter are not hidden.
 
+Inline code and inline HTML stay part of the sentence around them, but their characters do not count toward the sentence-length limit: like URLs, they are often long without making the sentence harder to read.
+
 ## Reporting diagnostics
 
 Diagnostics are sorted for stable output before being printed. Two output formats are supported:

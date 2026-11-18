@@ -100,8 +100,11 @@ public struct SentenceLengthLimitRule: Rule {
       let isMaskedBlock = character == MaskedSource.blockPlaceholder
 
       // Inline code is part of the sentence, but its contents are not prose:
-      // they are neither counted nor able to end the sentence.
-      let isInInlineCode = inlineCode.contains(index)
+      // they are neither counted nor able to end the sentence. The linter hands
+      // over inline code and inline HTML already masked, one placeholder per
+      // hidden character.
+      let isInInlineCode =
+        character == MaskedSource.inlinePlaceholder || inlineCode.contains(index)
 
       if !isInURL && !isMaskedBlock && !isInInlineCode {
         currentLength += 1
