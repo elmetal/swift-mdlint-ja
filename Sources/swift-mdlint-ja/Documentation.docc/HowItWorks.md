@@ -16,7 +16,7 @@ If no paths are provided, the current working directory is scanned. Otherwise, e
 
 ## Running the linter
 
-All collected files are processed by a `Linter` from `MDLintCore`. The linter returns diagnostics and, when `--fix` is enabled, the fixed content. Fixable violations are written back to disk whenever the fixes differ from the original text.
+All collected files are processed by a `Linter` from `MDLintCore`. The linter returns diagnostics and, when `--fix` is enabled, the fixed content. Fixed content is written back to disk whenever it differs from the original text, and the rewritten file is linted again so that only the remaining violations are reported.
 
 ## Excluding code and HTML
 

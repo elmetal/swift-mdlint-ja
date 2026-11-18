@@ -48,7 +48,7 @@ Configuration files express an array of rule identifiers in JSON. Unknown identi
 
 ## Output
 
-Diagnostics contain the file path, line number, and a message; the `text` format also shows the rule identifier. When `--format gha` is enabled, the output uses GitHub Actions workflow commands so violations appear as annotations. If `--fix` is provided, files are modified in place when a fix succeeds.
+Diagnostics contain the file path, line number, and a message; the `text` format also shows the rule identifier. When `--format gha` is enabled, the output uses GitHub Actions workflow commands so violations appear as annotations. If `--fix` is provided, files are modified in place and only the violations that remain afterwards are reported.
 
 ## Topics
 
