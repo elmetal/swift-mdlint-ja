@@ -44,6 +44,16 @@ struct JapaneseConjunctionDuplicationRuleTests {
     #expect(diagnostics.isEmpty)
   }
 
+  @Test func distinguishesConjunctionsSharingAPrefix() {
+    let content = "それで終わりにした。それでも続きがあった。"
+    let document = Document(parsing: content)
+    let rule = JapaneseConjunctionDuplicationRule()
+
+    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+
+    #expect(diagnostics.isEmpty)
+  }
+
   @Test func reportsCorrectLineWithWindowsLineEndings() throws {
     let content = "朝起きた。\r\nそして昼は仕事をした。\r\nそして夜に寝た。\r\n"
     let document = Document(parsing: content)

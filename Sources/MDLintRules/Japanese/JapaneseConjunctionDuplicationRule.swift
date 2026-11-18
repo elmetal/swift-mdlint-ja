@@ -110,7 +110,12 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
       while let foundRange = text.range(of: conjunction, options: [], range: searchRange) {
         if isValidBoundary(in: text, for: foundRange, sentenceRange: sentenceRange) {
           if let currentBest = best {
-            if foundRange.lowerBound < currentBest.range.lowerBound {
+            // Prefer the earliest match; at the same position prefer the longest one
+            // so that "それでも" is not mistaken for "それで".
+            if foundRange.lowerBound < currentBest.range.lowerBound
+              || (foundRange.lowerBound == currentBest.range.lowerBound
+                && foundRange.upperBound > currentBest.range.upperBound)
+            {
               best = ConjunctionOccurrence(conjunction: conjunction, range: foundRange)
             }
           } else {
