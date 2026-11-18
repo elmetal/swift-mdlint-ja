@@ -5,8 +5,9 @@ import Markdown
 /// A rule that ensures inline code spans use balanced backticks.
 ///
 /// Inline code snippets must open and close with the same number of backtick
-/// characters. This rule inspects each non-code-block line for stray backtick
-/// runs and reports diagnostics when a matching closing delimiter is missing.
+/// characters. This rule inspects each non-code-block line for backtick runs
+/// and reports a diagnostic when a run has no closing run of the same length
+/// on that line.
 public struct InlineBacktickClosureRule: Rule {
   public let id = "ja.backtick.unmatched"
   public let description = "インラインコードのバッククォートは閉じてください。"
@@ -15,10 +16,9 @@ public struct InlineBacktickClosureRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let lines = originalText.components(separatedBy: "\n")
     var inFencedCodeBlock = false
 
-    for (index, line) in lines.enumerated() {
+    for (index, line) in originalText.sourceLines.enumerated() {
       let trimmed = line.trimmingCharacters(in: .whitespaces)
       if trimmed.hasPrefix("```") {
         inFencedCodeBlock.toggle()
@@ -27,44 +27,11 @@ public struct InlineBacktickClosureRule: Rule {
 
       if inFencedCodeBlock { continue }
 
-      var isInsideInlineCode = false
-      var unmatchedColumn: Int?
-      var currentIndex = line.startIndex
-
-      while currentIndex < line.endIndex {
-        if line[currentIndex] == "`" {
-          var runLength = 0
-          var lookahead = currentIndex
-          while lookahead < line.endIndex && line[lookahead] == "`" {
-            runLength += 1
-            lookahead = line.index(after: lookahead)
-          }
-
-          for _ in 0..<runLength {
-            if isInsideInlineCode {
-              isInsideInlineCode = false
-              unmatchedColumn = nil
-            } else {
-              isInsideInlineCode = true
-              if unmatchedColumn == nil {
-                let column = line.distance(from: line.startIndex, to: currentIndex) + 1
-                unmatchedColumn = column
-              }
-            }
-          }
-
-          currentIndex = lookahead
-          continue
-        }
-
-        currentIndex = line.index(after: currentIndex)
-      }
-
-      if isInsideInlineCode, let column = unmatchedColumn {
+      if let unmatched = Self.firstUnmatchedBacktickRun(in: line) {
         let diagnostic = Diagnostic(
           file: fileURL,
           line: index + 1,
-          column: column,
+          column: line.distance(from: line.startIndex, to: unmatched) + 1,
           ruleID: id,
           message: "インラインコードのバッククォートが閉じられていません。"
         )
@@ -73,5 +40,57 @@ public struct InlineBacktickClosureRule: Rule {
     }
 
     return diagnostics
+  }
+
+  /// Returns the start of the first backtick run that is not closed on the line.
+  ///
+  /// Following CommonMark, a run of N backticks opens a code span that is closed
+  /// by the next run of exactly N backticks, and a backslash escapes a backtick
+  /// outside of code spans.
+  private static func firstUnmatchedBacktickRun(in line: Substring) -> String.Index? {
+    var current = line.startIndex
+
+    while current < line.endIndex {
+      if line[current] == "\\" {
+        // Skip the escaped character, whatever it is.
+        current = line.index(after: current)
+        if current < line.endIndex { current = line.index(after: current) }
+        continue
+      }
+
+      guard line[current] == "`" else {
+        current = line.index(after: current)
+        continue
+      }
+
+      let opener = backtickRun(in: line, from: current)
+      var search = opener.upperBound
+      var closer: Range<String.Index>?
+      while let next = line[search...].firstIndex(of: "`") {
+        let run = backtickRun(in: line, from: next)
+        if line.distance(from: run.lowerBound, to: run.upperBound)
+          == line.distance(from: opener.lowerBound, to: opener.upperBound)
+        {
+          closer = run
+          break
+        }
+        search = run.upperBound
+      }
+
+      guard let closer else { return opener.lowerBound }
+      current = closer.upperBound
+    }
+
+    return nil
+  }
+
+  private static func backtickRun(in line: Substring, from start: String.Index)
+    -> Range<String.Index>
+  {
+    var end = start
+    while end < line.endIndex, line[end] == "`" {
+      end = line.index(after: end)
+    }
+    return start..<end
   }
 }
