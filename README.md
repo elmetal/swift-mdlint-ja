@@ -33,6 +33,23 @@ When no paths are provided the linter scans the current directory recursively fo
 
 Code blocks, inline code, and raw HTML are excluded from both the checks and `--fix`.
 
+### Turning rules off inside a file
+
+HTML comments turn rules off for part of a file, for both the checks and `--fix`:
+
+```markdown
+<!-- mdlint-disable -->
+Nothing is reported or fixed here.
+<!-- mdlint-enable -->
+
+<!-- mdlint-disable-next-line ja.comma.max-three -->
+This line is not checked by the named rule.
+```
+
+- `<!-- mdlint-disable -->` turns every rule off from the line of the comment, until `<!-- mdlint-enable -->` or the end of the file.
+- `<!-- mdlint-disable-next-line -->` turns every rule off for the line after the comment.
+- Rule identifiers after the keyword, separated by spaces or commas, limit a comment to those rules. Unknown identifiers are ignored.
+
 ### Configuration file
 
 The configuration file is a JSON array containing rule identifier strings. Unknown identifiers are ignored after a warning is printed to standard error.

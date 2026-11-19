@@ -396,10 +396,14 @@ extension MaskedSource {
 
 /// Converts the line and column pairs reported by the Markdown parser into
 /// string indices.
-private struct LineIndex {
+struct LineIndex {
   private let text: String
   /// The index of the first character of each line.
   private let lineStarts: [String.Index]
+
+  /// The number of lines. A text that ends in a line break has an empty last
+  /// line.
+  var lineCount: Int { lineStarts.count }
 
   init(_ text: String) {
     self.text = text
@@ -437,6 +441,12 @@ private struct LineIndex {
       return nil
     }
     return index.samePosition(in: text.unicodeScalars)
+  }
+
+  /// Returns the range of a 1-based line that exists, line break included.
+  func range(ofLine lineNumber: Int) -> Range<String.Index> {
+    let upperBound = lineNumber < lineStarts.count ? lineStarts[lineNumber] : text.endIndex
+    return lineStarts[lineNumber - 1]..<upperBound
   }
 
   /// Returns the range that covers the given 1-based lines, line breaks

@@ -48,6 +48,19 @@ Configuration files express an array of rule identifiers in JSON. Unknown identi
 ]
 ```
 
+## Turning rules off inside a file
+
+HTML comments turn rules off for part of a file. Each comment applies to every rule, or to the rule identifiers written after the keyword. See <doc:DisableComments> for the details.
+
+```markdown
+<!-- mdlint-disable -->
+Nothing is reported or fixed here.
+<!-- mdlint-enable -->
+
+<!-- mdlint-disable-next-line ja.comma.max-three -->
+This line is not checked by the named rule.
+```
+
 ## Output
 
 Diagnostics contain the file path, line number, and a message; the `text` format also shows the rule identifier. When `--format gha` is enabled, the output uses GitHub Actions workflow commands so violations appear as annotations. If `--fix` is provided, files are modified in place and only the violations that remain afterwards are reported.
@@ -60,6 +73,7 @@ Diagnostics contain the file path, line number, and a message; the `text` format
 ### Understanding the Tool
 
 - <doc:HowItWorks>
+- <doc:DisableComments>
 
 ### Command Options
 

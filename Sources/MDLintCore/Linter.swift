@@ -24,6 +24,13 @@ public struct Linter {
   /// Code blocks, inline code, and raw HTML are hidden from the rules by a
   /// ``MaskedSource``, so they are neither reported nor rewritten.
   ///
+  /// HTML comments in the document turn rules off for part of it:
+  /// `<!-- mdlint-disable -->` and `<!-- mdlint-enable -->` delimit a range of
+  /// lines, and `<!-- mdlint-disable-next-line -->` covers the line after the
+  /// comment. Each applies to every rule, or to the rule identifiers listed
+  /// after the keyword. On the lines where a rule is off, its diagnostics are
+  /// not returned and its fixes are not applied.
+  ///
   /// - Parameters:
   ///   - content: The Markdown source to lint.
   ///   - fileURL: The URL used in diagnostics to identify the document.
@@ -35,11 +42,13 @@ public struct Linter {
   public func lint(content: String, fileURL: URL, applyFixes: Bool) -> ([Diagnostic], String?) {
     let document = Document(parsing: content)
     let source = MaskedSource(content: content, document: document)
+    let directives = DisableDirectives(document: document)
     var diagnostics: [Diagnostic] = []
 
     for rule in rules {
+      let found = rule.check(document: document, fileURL: fileURL, originalText: source.text)
       diagnostics.append(
-        contentsOf: rule.check(document: document, fileURL: fileURL, originalText: source.text))
+        contentsOf: found.filter { !directives.disables($0.ruleID, atLine: $0.line) })
     }
 
     guard applyFixes else { return (diagnostics, nil) }
@@ -48,7 +57,17 @@ public struct Linter {
     var fixed = content
     for rule in rules {
       guard let fixableRule = rule as? AutoFixable else { continue }
-      let candidate = fixableRule.fixing(originalText: maskedText)
+      var candidate = fixableRule.fixing(originalText: maskedText)
+      if !directives.isEmpty {
+        // The directives refer to lines, so a fix that changes the number of
+        // lines is dropped: neither this rule nor the ones after it could
+        // tell any more which lines are turned off.
+        guard
+          let kept = directives.keepingDisabledLines(
+            of: maskedText, in: candidate, for: rule.id)
+        else { continue }
+        candidate = kept
+      }
       // A fix that disturbed the placeholders cannot be mapped back onto the
       // hidden regions, so it is dropped rather than risk corrupting them.
       guard let restored = source.unmasking(candidate) else { continue }

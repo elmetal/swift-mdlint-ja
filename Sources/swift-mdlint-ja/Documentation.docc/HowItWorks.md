@@ -32,6 +32,12 @@ Each hidden character becomes exactly one placeholder, so reported line and colu
 
 Inline code and inline HTML stay part of the sentence around them, but their characters do not count toward the sentence-length limit: like URLs, they are often long without making the sentence harder to read.
 
+## Turning rules off with comments
+
+The linter also reads the HTML comments of the parsed file for directives: `<!-- mdlint-disable -->`, `<!-- mdlint-enable -->`, and `<!-- mdlint-disable-next-line -->`, each optionally followed by rule identifiers. From them it works out, for every line, which rules are turned off. See <doc:DisableComments> for the syntax.
+
+The rules themselves do not know about the directives. Each rule checks the whole file, and the linter then discards the diagnostics reported on lines where that rule is off. Automatic fixes work the same way: a rule fixes the whole text, and the linter puts back the lines on which the rule is off. This needs the lines before and after the fix to correspond, so in a file that contains directives a fix that changes the number of lines is not applied.
+
 ## Reporting diagnostics
 
 Diagnostics are sorted for stable output before being printed. Two output formats are supported:
