@@ -44,10 +44,9 @@ struct JapanesePolitenessStyleConsistencyRuleTests {
 
   @Test func ignoresLinesInsideCodeBlocks() {
     let content = "これはテストです。\n```\nこれは報告である。\n```"
-    let document = Document(parsing: content)
     let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .desumasu)
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     #expect(diagnostics.isEmpty)
   }
@@ -143,20 +142,18 @@ struct JapanesePolitenessStyleConsistencyRuleTests {
 
   @Test func ignoresTildeFencedAndIndentedCodeBlocks() {
     let content = "これはテストです。\n\n~~~\nこれは報告である。\n~~~\n\n    これも報告である。\n"
-    let document = Document(parsing: content)
     let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .desumasu)
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     #expect(diagnostics.isEmpty)
   }
 
   @Test func doesNotClassifyLinesByInlineCodeContents() {
     let content = "これは事実である。\n出力は `完了です`\n"
-    let document = Document(parsing: content)
     let rule = JapanesePolitenessStyleConsistencyRule(preferredStyle: .dearu)
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     #expect(diagnostics.isEmpty)
   }

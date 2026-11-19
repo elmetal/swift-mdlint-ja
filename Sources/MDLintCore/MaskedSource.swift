@@ -11,7 +11,9 @@ import Markdown
 /// - Fenced and indented code blocks, and HTML blocks. Each hidden character
 ///   becomes ``blockPlaceholder``.
 /// - Inline code spans and inline HTML. Each hidden character becomes
-///   ``inlinePlaceholder``.
+///   ``inlinePlaceholder``. Text between matching backtick runs on one line is
+///   hidden in the same way even where the parser does not treat it as a code
+///   span, which happens after an unclosed backtick run.
 ///
 /// Every hidden character is replaced by exactly one placeholder character and
 /// line breaks are kept, so a line and column in ``text`` refers to the same
@@ -189,7 +191,97 @@ extension MaskedSource {
     }
 
     visit(document)
-    return regions
+
+    // Add the code spans the parser gave up on. They start at a visible
+    // backtick, so one can enclose a region found above but never the other
+    // way around; the enclosed region is dropped.
+    let unparsed = unparsedCodeSpans(in: content, outside: regions).map {
+      Region(range: $0, placeholder: inlinePlaceholder)
+    }
+    guard !unparsed.isEmpty else { return regions }
+
+    var merged: [Region] = []
+    var end = content.startIndex
+    for region in (regions + unparsed).sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+      let lowerBound = max(region.range.lowerBound, end)
+      guard lowerBound < region.range.upperBound else { continue }
+      merged.append(
+        Region(range: lowerBound..<region.range.upperBound, placeholder: region.placeholder))
+      end = region.range.upperBound
+    }
+    return merged
+  }
+
+  /// Finds text between backtick runs that the parser left as plain text
+  /// although it is closed on its own line.
+  ///
+  /// In a paragraph with an unclosed backtick run, the parser can stop
+  /// recognizing the code spans that follow it. Their text still reads as
+  /// code, so it is kept away from the rules as well. Runs are paired the way
+  /// CommonMark pairs them, but only within one line: a run of N backticks is
+  /// closed by the next run of exactly N backticks, and a backslash escapes a
+  /// backtick outside of a span.
+  private static func unparsedCodeSpans(in content: String, outside regions: [Region])
+    -> [Range<String.Index>]
+  {
+    var spans: [Range<String.Index>] = []
+    // The visible backtick runs of the current line.
+    var runs: [(range: Range<String.Index>, isEscaped: Bool)] = []
+
+    func length(_ range: Range<String.Index>) -> Int {
+      content.distance(from: range.lowerBound, to: range.upperBound)
+    }
+
+    func endLine() {
+      var next = runs.startIndex
+      while next < runs.endIndex {
+        var opener = runs[next].range
+        if runs[next].isEscaped {
+          opener = content.index(after: opener.lowerBound)..<opener.upperBound
+        }
+        let openerLength = length(opener)
+        if openerLength > 0,
+          let closer = runs[(next + 1)...].firstIndex(where: { length($0.range) == openerLength })
+        {
+          spans.append(opener.lowerBound..<runs[closer].range.upperBound)
+          next = closer + 1
+        } else {
+          next += 1
+        }
+      }
+      runs.removeAll(keepingCapacity: true)
+    }
+
+    func scan(_ range: Range<String.Index>) {
+      var precedingBackslashes = 0
+      var index = range.lowerBound
+      while index < range.upperBound {
+        let character = content[index]
+        if character == "`" {
+          let start = index
+          while index < range.upperBound, content[index] == "`" {
+            index = content.index(after: index)
+          }
+          runs.append((start..<index, !precedingBackslashes.isMultiple(of: 2)))
+          precedingBackslashes = 0
+          continue
+        }
+        precedingBackslashes = character == "\\" ? precedingBackslashes + 1 : 0
+        if character.isNewline { endLine() }
+        index = content.index(after: index)
+      }
+    }
+
+    var cursor = content.startIndex
+    for region in regions {
+      scan(cursor..<region.range.lowerBound)
+      if content[region.range].contains(where: \.isNewline) { endLine() }
+      cursor = region.range.upperBound
+    }
+    scan(cursor..<content.endIndex)
+    endLine()
+
+    return spans
   }
 
   /// Finds the code span whose content is `code`, delimiters included.

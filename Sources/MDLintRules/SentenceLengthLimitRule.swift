@@ -6,9 +6,10 @@ import Markdown
 /// and code.
 ///
 /// Long sentences can reduce readability. This rule counts characters in each sentence
-/// while ignoring URL substrings and inline code spans, and reports a diagnostic when the
-/// length exceeds 100. A sentence ends at a terminator such as "。", at a blank line (a
-/// paragraph break), or at a code block; the contents of code blocks are not counted.
+/// while ignoring URL substrings, inline code spans, and inline HTML, and reports a
+/// diagnostic when the length exceeds 100. A sentence ends at a terminator such as "。",
+/// at a blank line (a paragraph break), or at a code or HTML block. The linter hides code
+/// and raw HTML before the rule runs, so their contents are not counted.
 ///
 /// A sentence also ends where the next block begins, so list items, headings, and table
 /// rows that follow each other without a blank line are separate sentences, and so is each
@@ -40,9 +41,6 @@ public struct SentenceLengthLimitRule: Rule {
     var exceedingLine: Int?
     var exceedingColumn: Int?
     var lineIsBlank = true
-    let codeLines = document.codeBlockLineNumbers
-    let inlineCode = document.inlineCodeRanges(in: originalText)
-    var inCodeBlock = codeLines.contains(line)
 
     func endSentence() {
       let currentSentenceLength = currentLength
@@ -79,15 +77,6 @@ public struct SentenceLengthLimitRule: Rule {
       let nextIndex = originalText.index(after: index)
       defer { index = nextIndex }
 
-      if inCodeBlock {
-        if character.isLineTerminator {
-          line += 1
-          column = 1
-          inCodeBlock = codeLines.contains(line)
-        }
-        continue
-      }
-
       while currentURLRangeIndex < urlRanges.count
         && index >= urlRanges[currentURLRangeIndex].upperBound
       {
@@ -106,14 +95,11 @@ public struct SentenceLengthLimitRule: Rule {
       // sentence that precedes it and is not counted itself.
       let isMaskedBlock = character == MaskedSource.blockPlaceholder
 
-      // Inline code is part of the sentence, but its contents are not prose:
-      // they are neither counted nor able to end the sentence. The linter hands
-      // over inline code and inline HTML already masked, one placeholder per
-      // hidden character.
-      let isInInlineCode =
-        character == MaskedSource.inlinePlaceholder || inlineCode.contains(index)
+      // Masked inline code or inline HTML is part of the sentence, but its
+      // contents are not prose, so its placeholders are not counted.
+      let isMaskedInline = character == MaskedSource.inlinePlaceholder
 
-      if !isInURL && !isMaskedBlock && !isInInlineCode {
+      if !isInURL && !isMaskedBlock && !isMaskedInline {
         currentLength += 1
         if currentLength == maxLength + 1 {
           exceeded = true
@@ -122,7 +108,7 @@ public struct SentenceLengthLimitRule: Rule {
         }
       }
 
-      if isMaskedBlock || (!isInInlineCode && sentenceTerminators.contains(character)) {
+      if isMaskedBlock || sentenceTerminators.contains(character) {
         endSentence()
       }
 
@@ -133,9 +119,6 @@ public struct SentenceLengthLimitRule: Rule {
         line += 1
         column = 1
         lineIsBlank = true
-        inCodeBlock = codeLines.contains(line)
-        // A code block interrupts the paragraph it follows.
-        if inCodeBlock { endSentence() }
       } else {
         column += 1
         if !character.isWhitespace { lineIsBlank = false }

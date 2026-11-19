@@ -5,10 +5,10 @@ import Markdown
 /// A rule that detects back-to-back Japanese conjunctions.
 ///
 /// Consecutive conjunctions such as "しかし、しかし" make prose feel redundant
-/// and disrupt the flow of a sentence. This rule walks through each sentence
-/// outside of code blocks and inline code spans,
+/// and disrupt the flow of a sentence. This rule walks through each sentence,
 /// records the first conjunction it encounters, and reports a diagnostic when
-/// the same conjunction appears at the beginning of the next sentence.
+/// the same conjunction appears at the beginning of the next sentence. The
+/// linter hides code and raw HTML before the rule runs.
 ///
 /// Inspired by https://github.com/textlint-ja/textlint-rule-no-doubled-conjunction.
 public struct JapaneseConjunctionDuplicationRule: Rule {
@@ -40,16 +40,11 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
-    let inlineCode = document.inlineCodeRanges(in: originalText)
-    let sentenceRanges = self.sentenceRanges(
-      in: originalText, skipping: document.codeBlockLineNumbers, inlineCode: inlineCode)
+    let sentenceRanges = self.sentenceRanges(in: originalText)
     var lastConjunction: ConjunctionOccurrence?
 
     for range in sentenceRanges {
-      guard
-        let occurrence = firstConjunction(
-          in: originalText, sentenceRange: range, inlineCode: inlineCode)
-      else {
+      guard let occurrence = firstConjunction(in: originalText, sentenceRange: range) else {
         continue
       }
 
@@ -73,18 +68,14 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
     return diagnostics
   }
 
-  /// Splits the text into sentences, leaving out the lines of code blocks.
+  /// Splits the text into sentences.
   ///
-  /// A code block also ends the sentence that precedes it. A terminator inside
-  /// an inline code span does not end a sentence.
-  private func sentenceRanges(
-    in text: String, skipping codeLines: Set<Int>, inlineCode: InlineCodeRanges
-  ) -> [Range<String.Index>] {
+  /// A masked code or HTML block belongs to no sentence and ends the one that
+  /// precedes it.
+  private func sentenceRanges(in text: String) -> [Range<String.Index>] {
     var ranges: [Range<String.Index>] = []
     var start = text.startIndex
     var index = start
-    var line = 1
-    var inCodeBlock = codeLines.contains(line)
 
     func endSentence(at end: String.Index) {
       let range = start..<end
@@ -97,19 +88,10 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
       let character = text[index]
       let nextIndex = text.index(after: index)
 
-      if character.isLineTerminator {
-        line += 1
-        let nextLineIsCode = codeLines.contains(line)
-        if inCodeBlock {
-          start = nextIndex
-        } else if nextLineIsCode {
-          endSentence(at: index)
-          start = nextIndex
-        }
-        inCodeBlock = nextLineIsCode
-      } else if !inCodeBlock, sentenceTerminators.contains(character),
-        !inlineCode.contains(index)
-      {
+      if character == MaskedSource.blockPlaceholder {
+        endSentence(at: index)
+        start = nextIndex
+      } else if sentenceTerminators.contains(character) {
         endSentence(at: nextIndex)
         start = nextIndex
       }
@@ -117,9 +99,7 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
       index = nextIndex
     }
 
-    if !inCodeBlock {
-      endSentence(at: text.endIndex)
-    }
+    endSentence(at: text.endIndex)
 
     return ranges
   }
@@ -135,16 +115,14 @@ public struct JapaneseConjunctionDuplicationRule: Rule {
   }
 
   private func firstConjunction(
-    in text: String, sentenceRange: Range<String.Index>, inlineCode: InlineCodeRanges
+    in text: String, sentenceRange: Range<String.Index>
   ) -> ConjunctionOccurrence? {
     var best: ConjunctionOccurrence?
 
     for conjunction in conjunctions {
       var searchRange = sentenceRange
       while let foundRange = text.range(of: conjunction, options: [], range: searchRange) {
-        if isValidBoundary(in: text, for: foundRange, sentenceRange: sentenceRange),
-          !inlineCode.contains(foundRange.lowerBound)
-        {
+        if isValidBoundary(in: text, for: foundRange, sentenceRange: sentenceRange) {
           if let currentBest = best {
             // Prefer the earliest match; at the same position prefer the longest one
             // so that "それでも" is not mistaken for "それで".

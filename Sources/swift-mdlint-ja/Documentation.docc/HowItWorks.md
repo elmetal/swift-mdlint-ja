@@ -26,6 +26,8 @@ Rules check prose only. Before running the rules, the linter parses the file and
 - Inline code spans
 - HTML blocks and inline HTML, including comments
 
+Text between matching backtick runs on one line is hidden as well when the parser does not treat it as a code span, which happens after an unclosed backtick run earlier in the paragraph.
+
 Each hidden character becomes exactly one placeholder, so reported line and column numbers still match the file. The same masked text is handed to the automatic fixes, and the hidden regions are restored afterwards, which means `--fix` never rewrites code or HTML. Link destinations and front matter are not hidden.
 
 Inline code and inline HTML stay part of the sentence around them, but their characters do not count toward the sentence-length limit: like URLs, they are often long without making the sentence harder to read.

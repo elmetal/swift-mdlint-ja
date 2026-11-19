@@ -40,25 +40,23 @@ struct JapaneseEllipsisRuleTests {
 
   @Test func leavesCodeBlocksAlone() {
     let content = "本文…\n\n```\nprint(\"待機…\")\n```\n"
-    let document = Document(parsing: content)
     let rule = JapaneseEllipsisRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     #expect(diagnostics.map(\.line) == [1])
-    #expect(rule.fixing(originalText: content) == "本文……\n\n```\nprint(\"待機…\")\n```\n")
+    #expect(rule.fixed(content) == "本文……\n\n```\nprint(\"待機…\")\n```\n")
   }
 
   @Test func leavesInlineCodeAlone() throws {
     let content = "本文… と `a…b` です"
-    let document = Document(parsing: content)
     let rule = JapaneseEllipsisRule()
 
-    let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
+    let diagnostics = rule.diagnostics(for: content)
 
     let diagnostic = try #require(diagnostics.first)
     #expect(diagnostics.count == 1)
     #expect(diagnostic.column == 3)
-    #expect(rule.fixing(originalText: content) == "本文…… と `a…b` です")
+    #expect(rule.fixed(content) == "本文…… と `a…b` です")
   }
 }

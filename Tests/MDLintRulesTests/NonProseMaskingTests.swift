@@ -107,6 +107,14 @@ struct NonProseMaskingTests {
     #expect(fixed(content) == expected)
   }
 
+  @Test func fixLeavesCodeSpansAfterAnUnclosedBacktickRunUntouched() {
+    // The parser stops recognizing code spans after the unclosed "``", but
+    // their contents must not be rewritten.
+    let content = "閉じない ``コード と `a … b` と `これは Test です.` です\n"
+
+    #expect(fixed(content) == content)
+  }
+
   @Test func fixLeavesHeadingLikeLinesInCodeUntouched() {
     let content = "# 見出し。\n\n```sh\n# コメント。\n```\n"
 

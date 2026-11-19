@@ -1,4 +1,7 @@
-/// Shared helpers for rules that scan the raw Markdown source.
+/// Shared helpers for rules that scan the Markdown source.
+///
+/// The linter hides code and raw HTML before it hands the source to a rule
+/// (see `MaskedSource`), so these helpers do not need to know about either.
 ///
 /// Lines can be terminated by LF, CRLF, or CR. Swift treats CRLF as a single
 /// `Character`, so comparing against "\n" alone misses Windows line endings;
@@ -21,30 +24,16 @@ extension String {
 
   /// Returns the text with `transform` applied to every line, keeping each
   /// original line terminator untouched.
-  ///
-  /// Lines whose 1-based number is in `skippedLineNumbers` are copied verbatim.
-  func mappingSourceLines(
-    skipping skippedLineNumbers: Set<Int> = [], _ transform: (Substring) -> String
-  ) -> String {
+  func mappingSourceLines(_ transform: (Substring) -> String) -> String {
     var result = ""
     var lineStart = startIndex
-    var lineNumber = 1
-
-    func appendLine(_ line: Substring) {
-      if skippedLineNumbers.contains(lineNumber) {
-        result += line
-      } else {
-        result += transform(line)
-      }
-    }
 
     for index in indices where self[index].isLineTerminator {
-      appendLine(self[lineStart..<index])
+      result += transform(self[lineStart..<index])
       result.append(self[index])
       lineStart = self.index(after: index)
-      lineNumber += 1
     }
-    appendLine(self[lineStart...])
+    result += transform(self[lineStart...])
     return result
   }
 
