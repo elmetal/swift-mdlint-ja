@@ -23,7 +23,7 @@ struct JapaneseEllipsisRuleTests {
     let content = "単独…\n奇数連続………\n偶数は……そのまま"
     let rule = JapaneseEllipsisRule()
 
-    let fixed = rule.fixing(originalText: content)
+    let fixed = rule.fixed(content)
 
     #expect(fixed == "単独……\n奇数連続…………\n偶数は……そのまま")
   }

@@ -23,7 +23,7 @@ struct JapanesePeriodRuleTests {
     let content = "一行目．  \n二行目.\n末尾はそのまま"
     let rule = JapanesePeriodRule()
 
-    let fixed = rule.fixing(originalText: content)
+    let fixed = rule.fixed(content)
 
     #expect(fixed == "一行目。  \n二行目。\n末尾はそのまま")
   }
@@ -57,7 +57,7 @@ struct JapanesePeriodRuleTests {
     let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
 
     #expect(diagnostics.map(\.line) == [1])
-    #expect(rule.fixing(originalText: content) == "一行目。\r\n二行目。\r\n")
+    #expect(rule.fixed(content) == "一行目。\r\n二行目。\r\n")
   }
 
   @Test func leavesCodeBlocksAlone() {
@@ -101,7 +101,7 @@ struct JapanesePeriodRuleTests {
     let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
 
     #expect(diagnostics.isEmpty)
-    #expect(rule.fixing(originalText: content) == content)
+    #expect(rule.fixed(content) == content)
   }
 
   @Test(arguments: [
@@ -120,7 +120,7 @@ struct JapanesePeriodRuleTests {
     let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
 
     #expect(diagnostics.count == 1)
-    #expect(rule.fixing(originalText: content) == expected)
+    #expect(rule.fixed(content) == expected)
   }
 
   @Test(arguments: ["そうですね...", "そうですね．．．", "つづく.."])
@@ -131,6 +131,6 @@ struct JapanesePeriodRuleTests {
     let diagnostics = rule.check(document: document, fileURL: sampleFileURL, originalText: content)
 
     #expect(diagnostics.isEmpty)
-    #expect(rule.fixing(originalText: content) == content)
+    #expect(rule.fixed(content) == content)
   }
 }

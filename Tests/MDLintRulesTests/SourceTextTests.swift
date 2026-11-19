@@ -1,3 +1,4 @@
+import MDLintCore
 import Testing
 
 @testable import MDLintRules
@@ -10,10 +11,16 @@ struct SourceTextTests {
     #expect(text.sourceLines == ["一行目", "二行目", "三行目", "四行目"])
   }
 
-  @Test func mappingPreservesLineTerminators() {
-    let text = "a\nb\r\nc\n"
+  @Test func fixItLocatesAPartOfALineInCharacters() throws {
+    let text = "一行目\r\n二👨‍👩‍👧行目"
+    let line = try #require(text.sourceLines.last)
+    let range = try #require(line.range(of: "行目"))
 
-    #expect(text.mappingSourceLines { $0.uppercased() } == "A\nB\r\nC\n")
+    let fixIt = FixIt(description: "置換", replacing: range, in: line, lineNumber: 2, with: "x")
+
+    #expect(
+      fixIt
+        == FixIt(description: "置換", line: 2, column: 3, endLine: 2, endColumn: 5, replacement: "x"))
   }
 
   @Test func computesLineAndColumnAcrossWindowsLineEndings() throws {

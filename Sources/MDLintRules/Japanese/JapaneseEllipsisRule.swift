@@ -6,10 +6,10 @@ import Markdown
 ///
 /// Japanese typography prefers ellipses rendered as paired "…" characters.
 /// This rule walks each line of Markdown source, searching for runs of odd
-/// length and recommending an autofix that inserts an additional ellipsis to
-/// reach the closest even count. The linter hides code and raw HTML before the
+/// length and attaching a fix-it that adds one more ellipsis to reach the
+/// closest even count. The linter hides code and raw HTML before the
 /// rule runs.
-public struct JapaneseEllipsisRule: Rule, AutoFixable {
+public struct JapaneseEllipsisRule: Rule {
   public let id = "ja.ellipsis.prefer-double"
   public let description = "3点リーダーは「……」に統一してください。"
 
@@ -41,7 +41,9 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
               ruleID: id,
               message: "3点リーダーは「……」のように偶数個続けてください。",
               severity: .warning,
-              fixIt: "「\(original)」を「\(replacement)」に置換"
+              fixIt: FixIt(
+                description: "「\(original)」を「\(replacement)」に置換",
+                replacing: index..<end, in: line, lineNumber: lineNumber + 1, with: replacement)
             )
             diagnostics.append(diagnostic)
           }
@@ -54,34 +56,5 @@ public struct JapaneseEllipsisRule: Rule, AutoFixable {
     }
 
     return diagnostics
-  }
-
-  public func fixing(originalText: String) -> String {
-    let ellipsis: Character = "…"
-
-    return originalText.mappingSourceLines { line in
-      var newLine = ""
-      var index = line.startIndex
-
-      while index != line.endIndex {
-        if line[index] == ellipsis {
-          var end = index
-          var count = 0
-          while end != line.endIndex, line[end] == ellipsis {
-            count += 1
-            end = line.index(after: end)
-          }
-
-          let replacementCount = count % 2 != 0 ? count + 1 : count
-          newLine.append(String(repeating: "…", count: replacementCount))
-          index = end
-        } else {
-          newLine.append(line[index])
-          index = line.index(after: index)
-        }
-      }
-
-      return newLine
-    }
   }
 }

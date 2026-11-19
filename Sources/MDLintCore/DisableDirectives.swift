@@ -68,45 +68,10 @@ struct DisableDirectives: Sendable {
     visit(document)
   }
 
-  /// A Boolean value that indicates whether the document has no directives.
-  var isEmpty: Bool { changes.isEmpty && singleLines.isEmpty }
-
   /// Returns whether the rule is turned off on the given 1-based line.
   func disables(_ ruleID: String, atLine line: Int) -> Bool {
     if singleLines[line]?.disables(ruleID) == true { return true }
     return changes.last(where: { $0.line <= line })?.state.disables(ruleID) ?? false
-  }
-
-  /// Undoes an automatic fix on the lines where its rule is turned off.
-  ///
-  /// - Parameters:
-  ///   - text: The text before the fix.
-  ///   - fixed: The text after the fix.
-  ///   - ruleID: The identifier of the rule that made the fix.
-  /// - Returns: `fixed`, with every line on which the rule is off taken from
-  ///   `text`. `nil` when the fix changed the number of lines: the lines of the
-  ///   two texts then no longer correspond, and neither do the line numbers of
-  ///   the directives.
-  func keepingDisabledLines(of text: String, in fixed: String, for ruleID: String) -> String? {
-    let originalLines = LineIndex(text)
-    let fixedLines = LineIndex(fixed)
-    guard originalLines.lineCount == fixedLines.lineCount else { return nil }
-
-    var result = ""
-    var nextChange = changes.startIndex
-    var isDisabled = false
-    for line in 1...originalLines.lineCount {
-      while nextChange < changes.endIndex, changes[nextChange].line <= line {
-        isDisabled = changes[nextChange].state.disables(ruleID)
-        nextChange += 1
-      }
-      if isDisabled || singleLines[line]?.disables(ruleID) == true {
-        result += text[originalLines.range(ofLine: line)]
-      } else {
-        result += fixed[fixedLines.range(ofLine: line)]
-      }
-    }
-    return result
   }
 }
 

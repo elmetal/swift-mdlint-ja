@@ -8,7 +8,7 @@ import Markdown
 /// mistake during copy-and-paste operations. Because it is hard to notice in
 /// rendered documents, this rule surfaces diagnostics for each occurrence and
 /// suggests removing the character.
-public struct ZeroWidthSpaceRule: Rule, AutoFixable {
+public struct ZeroWidthSpaceRule: Rule {
   public let id = "md.whitespace.no-zero-width-space"
   public let description = "ゼロ幅スペースを含めないでください。"
 
@@ -21,8 +21,13 @@ public struct ZeroWidthSpaceRule: Rule, AutoFixable {
 
     for (lineIndex, line) in originalText.sourceLines.enumerated() {
       // Columns count characters, as in every other rule, not Unicode scalars.
-      for (columnOffset, character) in line.enumerated() {
+      for (columnOffset, index) in line.indices.enumerated() {
+        let character = line[index]
         for scalar in character.unicodeScalars where scalar == Self.zeroWidthSpace {
+          // The fix keeps whatever else the character consists of.
+          var kept = String.UnicodeScalarView()
+          kept.append(
+            contentsOf: character.unicodeScalars.lazy.filter { $0 != Self.zeroWidthSpace })
           let diagnostic = Diagnostic(
             file: fileURL,
             line: lineIndex + 1,
@@ -30,7 +35,10 @@ public struct ZeroWidthSpaceRule: Rule, AutoFixable {
             ruleID: id,
             message: "ゼロ幅スペース (U+200B) を削除してください。",
             severity: .warning,
-            fixIt: "ゼロ幅スペースを削除"
+            fixIt: FixIt(
+              description: "ゼロ幅スペースを削除",
+              replacing: index..<line.index(after: index), in: line, lineNumber: lineIndex + 1,
+              with: String(kept))
           )
           diagnostics.append(diagnostic)
         }
@@ -38,9 +46,5 @@ public struct ZeroWidthSpaceRule: Rule, AutoFixable {
     }
 
     return diagnostics
-  }
-
-  public func fixing(originalText: String) -> String {
-    originalText.replacingOccurrences(of: String(Self.zeroWidthSpace), with: "")
   }
 }

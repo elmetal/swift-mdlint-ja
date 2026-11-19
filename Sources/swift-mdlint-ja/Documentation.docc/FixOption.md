@@ -4,7 +4,9 @@ Understand how the `--fix` (`-f`) flag applies automatic corrections to Markdown
 
 ## Overview
 
-When you supply the `--fix` flag, the linter attempts to correct any violations whose rules provide fix-its. Each modified file is written back to disk only when the suggested changes alter the original contents. After a file is rewritten, the linter reports only the violations that remain in it, with locations that match the rewritten file.
+When you supply the `--fix` flag, the linter corrects the violations whose rules provide a fix. Each modified file is written back to disk only when the changes alter the original contents. After a file is rewritten, the linter reports only the violations that remain in it, with locations that match the rewritten file.
+
+The linter applies the fixes that do not overlap, checks the result again, and repeats until nothing is left to fix. One run is therefore enough even when a fix uncovers another violation, and running `--fix` a second time changes nothing.
 
 ## Usage
 

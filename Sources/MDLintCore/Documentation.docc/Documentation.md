@@ -15,7 +15,9 @@ formatting styles for reporting issues to users.
 
 ### Rule Protocols
 - ``Rule``
-- ``AutoFixable``
+
+### Automatic Fixes
+- ``FixIt``
 
 ### Excluding Code and HTML
 - ``MaskedSource``

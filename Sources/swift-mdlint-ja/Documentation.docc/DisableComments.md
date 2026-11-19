@@ -49,6 +49,6 @@ An identifier that belongs to no rule has no effect and is not reported.
 - A comment decides the state of the whole line on which it ends, so `<!-- mdlint-disable -->` in the middle of a line also covers the text before it on that line. When several comments end on one line, the last one wins.
 - `mdlint-disable-next-line` covers one line of the file, not one sentence or paragraph.
 - A diagnostic is suppressed when the line it is reported on is turned off for its rule. A rule that looks at a whole sentence reports one position, usually where the limit is exceeded.
-- `--fix` leaves the lines that are turned off for a rule exactly as they are, and still applies that rule's fixes to the other lines.
+- `--fix` does not fix a violation whose diagnostic is suppressed, and still fixes that rule's violations on the other lines. A fix on another line can move the text, for example by removing a blank line above it; the comment moves with it and keeps covering the same text.
 - A comment inside a code block or a code span is not read.
 - The keywords are lowercase.

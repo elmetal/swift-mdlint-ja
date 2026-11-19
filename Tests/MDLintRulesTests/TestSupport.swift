@@ -14,8 +14,9 @@ extension Rule {
   }
 }
 
-extension Rule where Self: AutoFixable {
-  /// Fixes `content` the way ``Linter`` does, with code and raw HTML hidden from the rule.
+extension Rule {
+  /// Applies the rule's fix-its to `content` the way ``Linter`` does, with code and raw HTML
+  /// hidden from the rule.
   func fixed(_ content: String) -> String? {
     Linter(rules: [self]).lint(content: content, fileURL: sampleFileURL, applyFixes: true).1
   }

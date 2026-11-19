@@ -334,20 +334,47 @@ struct DisableDirectivesTests {
     #expect(reportedLines(in: result) == [])
   }
 
-  @Test func dropsAFixThatChangesTheNumberOfLinesWhenTheFileHasDirectives() {
+  @Test func appliesAFixThatChangesTheNumberOfLinesInAFileWithDirectives() {
     let rules: [Rule] = [BlankLineRule(), bad]
-    let content = "bad\n\n\n<!-- mdlint-disable-next-line test.no-bad -->\nbad\n"
+    let content = "bad\n\n\n<!-- mdlint-disable-next-line test.no-bad -->\nbad\n\nbad\n"
 
-    // Removing the blank lines would move the line that the comment refers to.
+    // The comment moves up with the text, and it still covers the line after it.
     #expect(
       fixed(content, rules: rules)
-        == "good\n\n\n<!-- mdlint-disable-next-line test.no-bad -->\nbad\n")
-    #expect(fixed("bad\n\n\nbad\n", rules: rules) == "good\ngood\n")
+        == "good\n<!-- mdlint-disable-next-line test.no-bad -->\nbad\ngood\n")
+  }
+
+  @Test func doesNotApplyALineRemovingFixOnDisabledLines() {
+    let rules: [Rule] = [BlankLineRule(), bad]
+    let content = """
+      bad
+
+      <!-- mdlint-disable test.no-blank-lines -->
+
+      bad
+
+      <!-- mdlint-enable -->
+
+      bad
+
+      """
+    let expected = """
+      good
+      <!-- mdlint-disable test.no-blank-lines -->
+
+      good
+
+      <!-- mdlint-enable -->
+      good
+
+      """
+
+    #expect(fixed(content, rules: rules) == expected)
   }
 }
 
 /// Reports every occurrence of a word and replaces it when fixing.
-private struct WordRule: Rule, AutoFixable {
+private struct WordRule: Rule {
   let id: String
   let word: String
   let replacement: String
@@ -359,32 +386,40 @@ private struct WordRule: Rule, AutoFixable {
     let lines = originalText.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
     for (index, line) in lines.enumerated() {
       for range in line.ranges(of: word) {
+        let column = line.distance(from: line.startIndex, to: range.lowerBound) + 1
         diagnostics.append(
           Diagnostic(
             file: fileURL,
             line: index + 1,
-            column: line.distance(from: line.startIndex, to: range.lowerBound) + 1,
+            column: column,
             ruleID: id,
-            message: description))
+            message: description,
+            fixIt: FixIt(
+              description: description, line: index + 1, column: column, endLine: index + 1,
+              endColumn: column + word.count, replacement: replacement)))
       }
     }
     return diagnostics
   }
-
-  func fixing(originalText: String) -> String {
-    originalText.replacingOccurrences(of: word, with: replacement)
-  }
 }
 
-/// Removes blank lines when fixing, which changes the number of lines.
-private struct BlankLineRule: Rule, AutoFixable {
+/// Reports blank lines and removes them when fixing, which changes the number of lines.
+private struct BlankLineRule: Rule {
   let id = "test.no-blank-lines"
   let description = "Removes blank lines"
 
-  func check(document _: Document, fileURL _: URL, originalText _: String) -> [Diagnostic] { [] }
-
-  func fixing(originalText: String) -> String {
-    originalText.split(separator: "\n", omittingEmptySubsequences: true)
-      .map { $0 + "\n" }.joined()
+  func check(document _: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
+    var diagnostics: [Diagnostic] = []
+    let lines = originalText.split(separator: "\n", omittingEmptySubsequences: false)
+    // The text after the last line break is not a line of its own.
+    for (index, line) in lines.dropLast().enumerated() where line.isEmpty {
+      diagnostics.append(
+        Diagnostic(
+          file: fileURL, line: index + 1, column: 1, ruleID: id, message: description,
+          fixIt: FixIt(
+            description: description, line: index + 1, column: 1, endLine: index + 2,
+            endColumn: 1, replacement: "")))
+    }
+    return diagnostics
   }
 }

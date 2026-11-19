@@ -273,8 +273,8 @@ extension RuleConfigurationLoader {
 
 /// Reports the diagnostics of another rule with a severity of its own.
 ///
-/// The wrapper keeps the identifier of the rule it wraps, and it is
-/// ``AutoFixable`` whenever that rule is.
+/// The wrapper keeps the identifier of the rule it wraps and passes on the
+/// fix-its of its diagnostics.
 struct SeverityOverride<Base: Rule>: Rule {
   let base: Base
   let severity: Diagnostic.Severity
@@ -288,12 +288,6 @@ struct SeverityOverride<Base: Rule>: Rule {
         file: $0.file, line: $0.line, column: $0.column, ruleID: $0.ruleID, message: $0.message,
         severity: severity, fixIt: $0.fixIt)
     }
-  }
-}
-
-extension SeverityOverride: AutoFixable where Base: AutoFixable {
-  func fixing(originalText: String) -> String {
-    base.fixing(originalText: originalText)
   }
 }
 

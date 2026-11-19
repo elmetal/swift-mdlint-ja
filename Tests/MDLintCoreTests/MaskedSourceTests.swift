@@ -235,6 +235,19 @@ struct MaskedSourceTests {
 
 @Suite("Linter masking")
 struct LinterMaskingTests {
+  @Test func hidesCharactersThatOnlyLookLikeLineBreaks() {
+    // A form feed, a vertical tab, NEL, and the Unicode separators do not end
+    // a line for the parser, so inside code they are hidden like other text.
+    let content = "```\na\u{0C}b\u{0B}c\u{85}d\u{2028}e\u{2029}f\n```\n\n`x\u{0C}y` 本文\n"
+    let source = mask(content)
+
+    #expect(
+      source.text
+        == "\(block)\(block)\(block)\n" + String(repeating: block, count: 11) + "\n"
+        + "\(block)\(block)\(block)\n\n" + String(repeating: inline, count: 5) + " 本文\n")
+    #expect(source.unmasking(source.text) == content)
+  }
+
   @Test func rulesDoNotSeeCode() throws {
     let linter = Linter(rules: [FindWordRule(word: "bad")])
     let content = "`bad` bad\n\n```\nbad\n```\n"
@@ -277,32 +290,47 @@ struct LinterMaskingTests {
 
 private let fileURL = URL(fileURLWithPath: "/tmp/masked.md")
 
-private struct FindWordRule: Rule, AutoFixable {
+private struct FindWordRule: Rule {
   let id = "test.find-word"
-  let description = "Reports the first occurrence of a word and replaces all of them"
+  let description = "Reports every occurrence of a word and replaces it with 'good'"
   let word: String
 
   func check(document _: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
-    guard let range = originalText.range(of: word) else { return [] }
-    let prefix = originalText[..<range.lowerBound]
-    let line = prefix.filter { $0 == "\n" }.count + 1
-    let column =
-      (prefix.split(separator: "\n", omittingEmptySubsequences: false).last?.count ?? 0) + 1
-    return [Diagnostic(file: fileURL, line: line, column: column, ruleID: id, message: word)]
-  }
-
-  func fixing(originalText: String) -> String {
-    originalText.replacingOccurrences(of: word, with: "good")
+    var diagnostics: [Diagnostic] = []
+    let lines = originalText.split(separator: "\n", omittingEmptySubsequences: false)
+    for (index, line) in lines.enumerated() {
+      for range in line.ranges(of: word) {
+        let column = line.distance(from: line.startIndex, to: range.lowerBound) + 1
+        diagnostics.append(
+          Diagnostic(
+            file: fileURL, line: index + 1, column: column, ruleID: id, message: word,
+            fixIt: FixIt(
+              description: "Replace with 'good'", line: index + 1, column: column,
+              endLine: index + 1, endColumn: column + word.count, replacement: "good")))
+      }
+    }
+    return diagnostics
   }
 }
 
-private struct PlaceholderEatingRule: Rule, AutoFixable {
+private struct PlaceholderEatingRule: Rule {
   let id = "test.eat-placeholders"
-  let description = "A misbehaving fix that deletes placeholder characters"
+  let description = "A misbehaving rule whose fix-its delete placeholder characters"
 
-  func check(document _: Document, fileURL _: URL, originalText _: String) -> [Diagnostic] { [] }
-
-  func fixing(originalText: String) -> String {
-    originalText.replacingOccurrences(of: String(MaskedSource.inlinePlaceholder), with: "")
+  func check(document _: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
+    var diagnostics: [Diagnostic] = []
+    let lines = originalText.split(separator: "\n", omittingEmptySubsequences: false)
+    for (index, line) in lines.enumerated() {
+      for (offset, character) in line.enumerated()
+      where character == MaskedSource.inlinePlaceholder {
+        diagnostics.append(
+          Diagnostic(
+            file: fileURL, line: index + 1, column: offset + 1, ruleID: id, message: "placeholder",
+            fixIt: FixIt(
+              description: "Delete", line: index + 1, column: offset + 1, endLine: index + 1,
+              endColumn: offset + 2, replacement: "")))
+      }
+    }
+    return diagnostics
   }
 }

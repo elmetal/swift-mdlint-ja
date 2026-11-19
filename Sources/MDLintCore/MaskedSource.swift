@@ -16,11 +16,11 @@ import Markdown
 ///   span, which happens after an unclosed backtick run.
 ///
 /// Every hidden character is replaced by exactly one placeholder character and
-/// line breaks are kept, so a line and column in ``text`` refers to the same
-/// position in the original source.
+/// line breaks (LF, CRLF, and CR) are kept, so a line and column in ``text``
+/// refers to the same position in the original source.
 ///
-/// After automatic fixes have edited ``text``, call ``unmasking(_:)`` to put
-/// the hidden characters back.
+/// After fix-its have edited ``text``, call ``unmasking(_:)`` to put the
+/// hidden characters back.
 public struct MaskedSource: Sendable {
   /// The character that stands in for one hidden character of inline code or
   /// inline HTML (U+FFFC OBJECT REPLACEMENT CHARACTER).
@@ -40,6 +40,11 @@ public struct MaskedSource: Sendable {
   /// that replaced it.
   private let hidden: [Hidden]
 
+  /// The ranges of ``text`` that stand for hidden regions, in ascending
+  /// order. A range includes the line breaks inside its region, which are
+  /// kept as they are and are therefore not placeholders.
+  private let hiddenRanges: [Range<String.Index>]
+
   private struct Hidden: Sendable {
     let placeholder: Unicode.Scalar
     let original: Character
@@ -56,6 +61,8 @@ public struct MaskedSource: Sendable {
 
     var masked = ""
     var hidden: [Hidden] = []
+    // UTF-8 offsets into `masked`, which is still growing.
+    var hiddenOffsets: [Range<Int>] = []
 
     // A placeholder character that already occurs in the prose is recorded as
     // hiding itself, so that `unmasking(_:)` stays unambiguous.
@@ -72,20 +79,50 @@ public struct MaskedSource: Sendable {
     for region in regions {
       appendVisible(content[cursor..<region.range.lowerBound])
       let placeholder = region.placeholder.unicodeScalars.first!
+      let regionStart = masked.utf8.count
       for character in content[region.range] {
-        if character.isNewline {
+        // Only the characters that end a line for the parser are kept. A form
+        // feed or a Unicode line separator is hidden like any other character.
+        if character == "\n" || character == "\r\n" || character == "\r" {
           masked.append(character)
         } else {
           masked.unicodeScalars.append(placeholder)
           hidden.append(Hidden(placeholder: placeholder, original: character))
         }
       }
+      hiddenOffsets.append(regionStart..<masked.utf8.count)
       cursor = region.range.upperBound
     }
     appendVisible(content[cursor...])
 
     self.text = masked
     self.hidden = hidden
+    let utf8 = masked.utf8
+    self.hiddenRanges = hiddenOffsets.map {
+      utf8.index(
+        utf8.startIndex, offsetBy: $0.lowerBound)..<utf8.index(
+          utf8.startIndex, offsetBy: $0.upperBound)
+    }
+  }
+
+  /// Returns whether replacing `range` of ``text`` with `replacement` would
+  /// change hidden text or make it impossible to put back.
+  ///
+  /// That is the case when the range overlaps a hidden region or lies inside
+  /// one, even if it only covers a line break there, and when the range or the
+  /// replacement contains a placeholder character. Inserting text right before
+  /// or right after a hidden region is fine.
+  func isProtected(_ range: Range<String.Index>, from replacement: String) -> Bool {
+    if text[range].unicodeScalars.contains(where: Self.isPlaceholder)
+      || replacement.unicodeScalars.contains(where: Self.isPlaceholder)
+    {
+      return true
+    }
+    return hiddenRanges.contains { hidden in
+      range.isEmpty
+        ? hidden.lowerBound < range.lowerBound && range.lowerBound < hidden.upperBound
+        : range.lowerBound < hidden.upperBound && hidden.lowerBound < range.upperBound
+    }
   }
 
   /// Restores the hidden characters in an edited copy of ``text``.
@@ -93,7 +130,7 @@ public struct MaskedSource: Sendable {
   /// The edited text must still contain every placeholder, in the original
   /// order. Everything between the placeholders may have changed.
   ///
-  /// - Parameter maskedText: ``text``, possibly modified by automatic fixes.
+  /// - Parameter maskedText: ``text``, possibly modified by fix-its.
   /// - Returns: The text with each placeholder replaced by the character it
   ///   hides, or `nil` when placeholders were added, removed, or reordered.
   public func unmasking(_ maskedText: String) -> String? {
@@ -401,10 +438,6 @@ struct LineIndex {
   /// The index of the first character of each line.
   private let lineStarts: [String.Index]
 
-  /// The number of lines. A text that ends in a line break has an empty last
-  /// line.
-  var lineCount: Int { lineStarts.count }
-
   init(_ text: String) {
     self.text = text
 
@@ -443,10 +476,21 @@ struct LineIndex {
     return index.samePosition(in: text.unicodeScalars)
   }
 
-  /// Returns the range of a 1-based line that exists, line break included.
-  func range(ofLine lineNumber: Int) -> Range<String.Index> {
-    let upperBound = lineNumber < lineStarts.count ? lineStarts[lineNumber] : text.endIndex
-    return lineStarts[lineNumber - 1]..<upperBound
+  /// Returns the string index of a 1-based line and a 1-based column that
+  /// counts characters, as diagnostics do. The column just past the last
+  /// character of the line is valid and refers to the line break, or to the
+  /// end of the text. Returns `nil` for a position that does not exist.
+  func index(line: Int, characterColumn column: Int) -> String.Index? {
+    guard let lineRange = range(ofLines: line...line), column >= 1 else { return nil }
+    var index = lineRange.lowerBound
+    for _ in 1..<column {
+      guard index < lineRange.upperBound else { return nil }
+      // Only the characters that end a line for the parser stop the count.
+      let character = text[index]
+      guard character != "\n", character != "\r\n", character != "\r" else { return nil }
+      index = text.index(after: index)
+    }
+    return index
   }
 
   /// Returns the range that covers the given 1-based lines, line breaks

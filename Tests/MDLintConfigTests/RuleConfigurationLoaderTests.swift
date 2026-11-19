@@ -274,7 +274,9 @@ struct RuleConfigurationLoaderObjectTests {
     let defaults = try RuleConfigurationLoader().loadRules(configurationPath: nil)
 
     func locations(_ diagnostics: [Diagnostic]) -> [String] {
-      diagnostics.map { "\($0.line):\($0.column) \($0.ruleID) \($0.message) \($0.fixIt ?? "")" }
+      diagnostics.map {
+        "\($0.line):\($0.column) \($0.ruleID) \($0.message) \($0.fixIt?.description ?? "")"
+      }
     }
 
     #expect(locations(lint(content, with: configured)) == locations(lint(content, with: defaults)))

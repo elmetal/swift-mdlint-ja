@@ -164,8 +164,7 @@ struct NonProseMaskingTests {
     let text = "# \(placeholders)\n\(placeholders) A \(placeholders).\n"
 
     for rule in DefaultRules.all() {
-      guard let fixable = rule as? AutoFixable else { continue }
-      let fixed = fixable.fixing(originalText: text)
+      let fixed = rule.fixed(text) ?? ""
       #expect(
         fixed.filter { placeholders.contains($0) } == text.filter { placeholders.contains($0) },
         "\(rule.id) changed the placeholders")

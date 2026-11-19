@@ -30,7 +30,7 @@ struct ZeroWidthSpaceRuleTests {
     let content = "前\u{200B}後\n別の行"
     let rule = ZeroWidthSpaceRule()
 
-    let fixed = rule.fixing(originalText: content)
+    let fixed = rule.fixed(content)
 
     #expect(fixed == "前後\n別の行")
   }
