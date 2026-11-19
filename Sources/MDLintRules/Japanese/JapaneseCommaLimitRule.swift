@@ -5,8 +5,9 @@ import Markdown
 /// A rule that enforces a limit on the number of Japanese commas (、) per sentence.
 ///
 /// Overusing commas makes Japanese sentences harder to read. This rule tracks commas
-/// within a sentence and emits a diagnostic when the fourth comma is encountered,
-/// encouraging the author to split or restructure the sentence. A sentence ends at
+/// within a sentence and emits a diagnostic at the first comma over the limit, which is
+/// three unless another limit is given, encouraging the author to split or restructure
+/// the sentence. A sentence ends at
 /// a terminator such as "。", at a blank line (a paragraph break), or at a code
 /// or HTML block. The linter hides code and raw HTML before the rule runs, so
 /// their contents are not counted.
@@ -16,17 +17,31 @@ import Markdown
 /// and so is each cell of a table. An ASCII period ends a sentence when whitespace
 /// or the end of the line follows it.
 public struct JapaneseCommaLimitRule: Rule {
-  public let id = "ja.comma.max-three"
-  public let description = "一文に含める読点は3つまでにしてください。"
+  /// The number of commas a sentence may contain when no other limit is given.
+  public static let defaultMaxCommaCount = 3
+
+  public let id = "ja.comma.max-count"
+  public let description: String
 
   private let commaCharacter: Character = "、"
   // A masked code or HTML block also ends the sentence that precedes it.
   private let sentenceTerminators: Set<Character> = [
     "。", "！", "？", "!", "?", "．", MaskedSource.blockPlaceholder,
   ]
-  private let maxCommaCount = 3
+  private let maxCommaCount: Int
 
-  public init() {}
+  /// Creates the rule.
+  ///
+  /// - Parameter maxCommaCount: The number of commas a sentence may contain.
+  public init(maxCommaCount: Int = defaultMaxCommaCount) {
+    self.maxCommaCount = maxCommaCount
+    self.description = "一文に含める読点は\(Self.counted(maxCommaCount))までにしてください。"
+  }
+
+  /// Formats a number of commas with the counter that reads naturally for it.
+  private static func counted(_ count: Int) -> String {
+    count < 10 ? "\(count)つ" : "\(count)個"
+  }
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     var diagnostics: [Diagnostic] = []
@@ -56,7 +71,8 @@ public struct JapaneseCommaLimitRule: Rule {
         return
       }
 
-      let message = "一文に読点が4つ以上あります（読点の数: \(commaCount)）。文を分割するなどして読みやすさを見直してください。"
+      let message =
+        "一文に読点が\(Self.counted(maxCommaCount + 1))以上あります（読点の数: \(commaCount)）。文を分割するなどして読みやすさを見直してください。"
       let diagnostic = Diagnostic(
         file: fileURL,
         line: diagnosticLine,

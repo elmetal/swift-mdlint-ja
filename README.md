@@ -26,8 +26,8 @@ Key options:
 - `--fix` / `-f`: Apply available automatic fixes in place.
 - `--format <text|gha>`: Choose plain text output (default) or GitHub Actions format.
 - `--strict`: Exit with a non-zero status code when violations are detected.
-- `--config <path>`: Load a JSON file that lists the rule identifiers to enable.
-- `--politeness-style <auto|desumasu|dearu>`: Control how the politeness-style consistency rule resolves conflicts.
+- `--config <path>`: Load a JSON file that chooses the rules and sets their options.
+- `--politeness-style <auto|desumasu|dearu>`: Control how the politeness-style consistency rule resolves conflicts. Overrides the configuration file.
 
 When no paths are provided the linter scans the current directory recursively for files with the `.md` extension. Hidden files and directories (such as `.build` or `.git`) are skipped while scanning directories. A path that does not exist is reported as an error: the remaining paths are still linted, and the command exits with status code `1`.
 
@@ -42,7 +42,7 @@ HTML comments turn rules off for part of a file, for both the checks and `--fix`
 Nothing is reported or fixed here.
 <!-- mdlint-enable -->
 
-<!-- mdlint-disable-next-line ja.comma.max-three -->
+<!-- mdlint-disable-next-line ja.comma.max-count -->
 This line is not checked by the named rule.
 ```
 
@@ -52,7 +52,26 @@ This line is not checked by the named rule.
 
 ### Configuration file
 
-The configuration file is a JSON array containing rule identifier strings. Unknown identifiers are ignored after a warning is printed to standard error.
+Without a configuration file, every rule runs with its default settings. A configuration file is JSON in one of two forms.
+
+An object adjusts the default rule set. Rules that are not mentioned keep running:
+
+```json
+{
+  "rules": {
+    "ja.sentence.max-length": { "max": 120 },
+    "ja.comma.max-count": { "max": 4, "severity": "error" },
+    "ja.kana.no-halfwidth": false
+  }
+}
+```
+
+- `false` turns a rule off, `true` keeps it as it is, and an object sets its options.
+- `severity` (`info`, `warning`, or `error`; default `warning`) is accepted by every rule. It changes the label of a violation, not the exit code.
+- `max` sets the limit of `ja.comma.max-count` (default `3`) and `ja.sentence.max-length` (default `100`).
+- `style` (`auto`, `desumasu`, or `dearu`) sets the style for `ja.style.no-mix-dearu-desumasu`.
+
+An array lists the rules to run, each with its default settings:
 
 ```json
 [
@@ -60,6 +79,8 @@ The configuration file is a JSON array containing rule identifier strings. Unkno
   "ja.heading.no-terminal-punctuation"
 ]
 ```
+
+Unknown rule identifiers and unknown options are ignored after a warning is printed to standard error. A value of the wrong type or out of range stops the command with an error. The former names `ja.comma.max-three` and `ja.sentence.max-one-hundred-characters` are still accepted for `ja.comma.max-count` and `ja.sentence.max-length`.
 
 ## Documentation
 https://elmetal.github.io/swift-mdlint-ja/documentation/

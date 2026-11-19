@@ -14,7 +14,7 @@ import Markdown
 ///
 /// Each comment can name rule identifiers, separated by spaces or commas, to
 /// limit itself to those rules, as in
-/// `<!-- mdlint-disable ja.comma.max-three -->`. An identifier that belongs to
+/// `<!-- mdlint-disable ja.comma.max-count -->`. An identifier that belongs to
 /// no rule has no effect.
 ///
 /// A comment that ends on a line decides the state of that whole line. When

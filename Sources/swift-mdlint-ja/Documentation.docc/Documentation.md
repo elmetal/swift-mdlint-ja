@@ -32,14 +32,26 @@ Key options include:
 - `--fix` / `-f`: Apply automatic corrections for fixable violations.
 - `--format <text|gha>`: Select the output format (`gha` emits GitHub Actions–compatible annotations).
 - `--strict`: Exit with code `2` when any violation is detected.
-- `--config <path>`: Load a JSON file that lists rule identifiers to enable.
-- `--politeness-style <auto|desumasu|dearu>`: Choose the style that the politeness-style consistency rule enforces (`auto` follows the majority style of each document).
+- `--config <path>`: Load a JSON file that chooses the rules and sets their options.
+- `--politeness-style <auto|desumasu|dearu>`: Choose the style that the politeness-style consistency rule enforces (`auto` follows the majority style of each document). It takes precedence over the configuration file.
 
 A path that does not exist is reported as an error. The remaining paths are still linted, and the command then exits with code `1`.
 
 ## Configuration
 
-Configuration files express an array of rule identifiers in JSON. Unknown identifiers are reported as warnings on standard error and ignored.
+A configuration file is JSON. An object with a `rules` key adjusts the default rule set: `false` turns a rule off, and an object sets its options. Rules that the file does not mention keep running with their default settings.
+
+```json
+{
+  "rules": {
+    "ja.sentence.max-length": { "max": 120 },
+    "ja.comma.max-count": { "max": 4, "severity": "error" },
+    "ja.kana.no-halfwidth": false
+  }
+}
+```
+
+An array of rule identifiers runs only the listed rules, each with its default settings.
 
 ```json
 [
@@ -47,6 +59,8 @@ Configuration files express an array of rule identifiers in JSON. Unknown identi
   "ja.heading.no-terminal-punctuation"
 ]
 ```
+
+Unknown identifiers and unknown options are reported as warnings on standard error and ignored. See <doc:ConfigOption> for the options of each rule.
 
 ## Turning rules off inside a file
 
@@ -57,7 +71,7 @@ HTML comments turn rules off for part of a file. Each comment applies to every r
 Nothing is reported or fixed here.
 <!-- mdlint-enable -->
 
-<!-- mdlint-disable-next-line ja.comma.max-three -->
+<!-- mdlint-disable-next-line ja.comma.max-count -->
 This line is not checked by the named rule.
 ```
 

@@ -2,11 +2,23 @@ import Foundation
 import MDLintCore
 
 public enum DefaultRules {
+  /// The settings of the rules that can be adjusted.
   public struct Options {
+    /// The style that the politeness-style consistency rule enforces.
     public var politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle
+    /// The number of commas a sentence may contain.
+    public var maxCommaCount: Int
+    /// The number of characters a sentence may contain.
+    public var maxSentenceLength: Int
 
-    public init(politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle = .auto) {
+    public init(
+      politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle = .auto,
+      maxCommaCount: Int = JapaneseCommaLimitRule.defaultMaxCommaCount,
+      maxSentenceLength: Int = SentenceLengthLimitRule.defaultMaxLength
+    ) {
       self.politenessStyle = politenessStyle
+      self.maxCommaCount = maxCommaCount
+      self.maxSentenceLength = maxSentenceLength
     }
   }
 
@@ -18,7 +30,7 @@ public enum DefaultRules {
     identifiers.map { $0.makeRule(options: options) }
   }
 
-  public enum Identifier: String, CaseIterable, Codable {
+  public enum Identifier: String, CaseIterable, Codable, Sendable {
     case japaneseEllipsis = "ja.ellipsis.prefer-double"
     case japanesePeriod = "ja.period.prefer-fullwidth"
     case headingTerminalPunctuation = "ja.heading.no-terminal-punctuation"
@@ -30,9 +42,25 @@ public enum DefaultRules {
     case japaneseConjunctionDuplication = "ja.conjunction.no-duplicate"
     case zeroWidthSpace = "md.whitespace.no-zero-width-space"
     case controlCharacter = "md.characters.no-control"
-    case japaneseCommaLimit = "ja.comma.max-three"
-    case sentenceLengthLimit = "ja.sentence.max-one-hundred-characters"
+    case japaneseCommaLimit = "ja.comma.max-count"
+    case sentenceLengthLimit = "ja.sentence.max-length"
     case japanesePolitenessStyleConsistency = "ja.style.no-mix-dearu-desumasu"
+
+    /// The names that rules had before their limits became adjustable.
+    ///
+    /// Configuration files written for earlier versions use them.
+    public static let formerNames: [String: Identifier] = [
+      "ja.comma.max-three": .japaneseCommaLimit,
+      "ja.sentence.max-one-hundred-characters": .sentenceLengthLimit,
+    ]
+
+    /// Creates an identifier from its name or from one of its former names.
+    public init?(name: String) {
+      guard let identifier = Identifier(rawValue: name) ?? Self.formerNames[name] else {
+        return nil
+      }
+      self = identifier
+    }
 
     public func makeRule(options: Options) -> Rule {
       switch self {
@@ -59,9 +87,9 @@ public enum DefaultRules {
       case .controlCharacter:
         return ControlCharacterRule()
       case .japaneseCommaLimit:
-        return JapaneseCommaLimitRule()
+        return JapaneseCommaLimitRule(maxCommaCount: options.maxCommaCount)
       case .sentenceLengthLimit:
-        return SentenceLengthLimitRule()
+        return SentenceLengthLimitRule(maxLength: options.maxSentenceLength)
       case .japanesePolitenessStyleConsistency:
         return JapanesePolitenessStyleConsistencyRule(preferredStyle: options.politenessStyle)
       }

@@ -146,4 +146,22 @@ struct SentenceLengthLimitRuleTests {
     #expect(diagnostic.column == 106)
     #expect(diagnostic.message.contains("現在の文字数: 111"))
   }
+
+  @Test func usesTheGivenLimit() throws {
+    let content = String(repeating: "あ", count: 120) + "。"
+
+    #expect(SentenceLengthLimitRule(maxLength: 121).diagnostics(for: content).isEmpty)
+
+    let rule = SentenceLengthLimitRule(maxLength: 10)
+    let diagnostic = try #require(rule.diagnostics(for: content).first)
+    #expect(diagnostic.column == 11)
+    #expect(diagnostic.ruleID == "ja.sentence.max-length")
+    #expect(diagnostic.message.contains("11文字以上"))
+    #expect(diagnostic.message.contains("10文字以内"))
+    #expect(rule.description == "URL とコードを除いて一文は10文字以内にしてください。")
+  }
+
+  @Test func keepsTheDefaultWordingForTheDefaultLimit() {
+    #expect(SentenceLengthLimitRule().description == "URL とコードを除いて一文は100文字以内にしてください。")
+  }
 }

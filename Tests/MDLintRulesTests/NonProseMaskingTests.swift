@@ -154,7 +154,7 @@ struct NonProseMaskingTests {
 
     let diagnostic = try #require(diagnostics(for: content).first)
 
-    #expect(diagnostic.ruleID == "ja.sentence.max-one-hundred-characters")
+    #expect(diagnostic.ruleID == "ja.sentence.max-length")
     #expect(diagnostic.message.contains("現在の文字数: 101"))
   }
 

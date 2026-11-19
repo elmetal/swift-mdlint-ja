@@ -2,12 +2,12 @@ import Foundation
 import MDLintCore
 import Markdown
 
-/// A rule that enforces a maximum sentence length of 100 characters, excluding URLs
-/// and code.
+/// A rule that enforces a maximum sentence length, excluding URLs and code.
 ///
 /// Long sentences can reduce readability. This rule counts characters in each sentence
 /// while ignoring URL substrings, inline code spans, and inline HTML, and reports a
-/// diagnostic when the length exceeds 100. A sentence ends at a terminator such as "。",
+/// diagnostic when the length exceeds the limit, which is 100 characters unless another
+/// limit is given. A sentence ends at a terminator such as "。",
 /// at a blank line (a paragraph break), or at a code or HTML block. The linter hides code
 /// and raw HTML before the rule runs, so their contents are not counted.
 ///
@@ -16,13 +16,22 @@ import Markdown
 /// cell of a table. An ASCII period ends a sentence when whitespace or the end of the line
 /// follows it, which keeps an English paragraph from being measured as a single sentence.
 public struct SentenceLengthLimitRule: Rule {
-  public let id = "ja.sentence.max-one-hundred-characters"
-  public let description = "URL とコードを除いて一文は100文字以内にしてください。"
+  /// The number of characters a sentence may contain when no other limit is given.
+  public static let defaultMaxLength = 100
+
+  public let id = "ja.sentence.max-length"
+  public let description: String
 
   private let sentenceTerminators: Set<Character> = ["。", "！", "？", "!", "?", "．"]
-  private let maxLength = 100
+  private let maxLength: Int
 
-  public init() {}
+  /// Creates the rule.
+  ///
+  /// - Parameter maxLength: The number of characters a sentence may contain.
+  public init(maxLength: Int = defaultMaxLength) {
+    self.maxLength = maxLength
+    self.description = "URL とコードを除いて一文は\(maxLength)文字以内にしてください。"
+  }
 
   public func check(document: Document, fileURL: URL, originalText: String) -> [Diagnostic] {
     let urlRanges = Self.urlRanges(in: originalText)
@@ -58,7 +67,7 @@ public struct SentenceLengthLimitRule: Rule {
       }
 
       let message =
-        "一文が101文字以上になっています（現在の文字数: \(currentSentenceLength)）。URL とコードを除いて100文字以内に収まるように文を見直してください。"
+        "一文が\(maxLength + 1)文字以上になっています（現在の文字数: \(currentSentenceLength)）。URL とコードを除いて\(maxLength)文字以内に収まるように文を見直してください。"
       let diagnostic = Diagnostic(
         file: fileURL,
         line: diagnosticLine,

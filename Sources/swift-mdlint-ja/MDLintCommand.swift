@@ -31,13 +31,16 @@ struct MDLintCommand: ParsableCommand {
   var strict: Bool = false
 
   @Option(
-    name: [.customLong("config")], help: "Path to a JSON file listing rule identifiers to enable.")
+    name: [.customLong("config")],
+    help: "Path to a JSON file that chooses the rules and sets their options.")
   var configurationPath: String?
 
   @Option(
     name: [.customLong("politeness-style")],
-    help: "Preferred Japanese politeness style: auto | desumasu | dearu.")
-  var politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle = .auto
+    help:
+      "Preferred Japanese politeness style: auto | desumasu | dearu. Overrides the configuration file."
+  )
+  var politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle?
 
   @Argument(help: "Markdown files or directories to lint.")
   var paths: [String] = []
@@ -47,19 +50,23 @@ struct MDLintCommand: ParsableCommand {
       unknownIdentifierHandler: { unknownIdentifiers in
         Self.warn(
           "Ignoring unknown rule identifiers: \(unknownIdentifiers.joined(separator: ", "))")
+      },
+      unknownOptionHandler: { ruleIdentifier, optionNames in
+        Self.warn(
+          "Ignoring unknown options of \(ruleIdentifier): \(optionNames.joined(separator: ", "))")
       })
 
     let rules: [Rule]
     do {
       rules = try loader.loadRules(
-        configurationPath: configurationPath,
-        options: .init(politenessStyle: politenessStyle))
+        configurationPath: configurationPath, politenessStyle: politenessStyle)
     } catch RuleConfigurationLoader.Error.fileNotFound(let path) {
       throw ValidationError("Configuration file not found at \(path)")
-    } catch is DecodingError {
+    } catch RuleConfigurationLoader.Error.invalidConfiguration(let reason) {
       throw ValidationError(
-        "Configuration file at \(configurationPath ?? "") must be a JSON array of rule identifier strings"
-      )
+        "Configuration file at \(configurationPath ?? "") is not valid: \(reason)")
+    } catch is DecodingError {
+      throw ValidationError("Configuration file at \(configurationPath ?? "") is not valid JSON")
     }
 
     let linter = Linter(rules: rules)

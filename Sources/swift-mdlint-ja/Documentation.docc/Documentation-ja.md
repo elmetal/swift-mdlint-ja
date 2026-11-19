@@ -28,14 +28,43 @@ mdlint-ja Articles
 - `--fix` / `-f`: 修正可能な違反に自動修正を適用します。
 - `--format <text|gha>`: 出力フォーマットを指定します。`gha` を選ぶと GitHub Actions 形式になります。
 - `--strict`: 違反が検出された場合に終了コード `2` で終了します。
-- `--config <path>`: 有効化するルール識別子を列挙した JSON ファイルを読み込みます。
-- `--politeness-style <auto|desumasu|dearu>`: 敬体・常体の混在チェックで揃える文体を指定します（`auto` は文書内で多い方に合わせます）。
+- `--config <path>`: 使うルールとそのオプションを指定した JSON ファイルを読み込みます。
+- `--politeness-style <auto|desumasu|dearu>`: 敬体・常体の混在チェックで揃える文体を指定します（`auto` は文書内で多い方に合わせます）。設定ファイルの指定より優先されます。
 
 存在しないパスを指定するとエラーとして報告します。残りのパスは通常どおり検査し、終了コード `1` で終了します。
 
 ## 設定
 
-設定ファイルはルール識別子の配列を JSON で表現します。未知の識別子が含まれている場合は警告を標準エラーに出力し、該当ルールを無視します。
+設定ファイルは JSON で書きます。設定ファイルを指定しない場合は、すべてのルールが既定の設定で動きます。
+
+`rules` キーを持つオブジェクトを書くと、既定のルールセットを調整できます。書いていないルールは既定の設定のまま有効です。
+
+```json
+{
+  "rules": {
+    "ja.sentence.max-length": { "max": 120 },
+    "ja.comma.max-count": { "max": 4, "severity": "error" },
+    "ja.kana.no-halfwidth": false
+  }
+}
+```
+
+- `false`: そのルールを無効にします。
+- `true`: そのルールを既定の設定で実行します。
+- オブジェクト: そのルールにオプションを指定します。
+
+指定できるオプションは次のとおりです。
+
+| オプション | 対象のルール | 値 | 既定値 |
+| --- | --- | --- | --- |
+| `severity` | すべてのルール | `"info"`、`"warning"`、`"error"` | `"warning"` |
+| `max` | `ja.comma.max-count` | 一文に含められる読点の数（1 以上の整数） | `3` |
+| `max` | `ja.sentence.max-length` | 一文の文字数の上限（1 以上の整数） | `100` |
+| `style` | `ja.style.no-mix-dearu-desumasu` | `"auto"`、`"desumasu"`、`"dearu"` | `"auto"` |
+
+`severity` は違反の表示（`[INFO]`、`[WARNING]`、`[ERROR]`）を変えるだけで、終了コードは変わりません。`--strict` を付けると、どの重大度の違反でも終了コード `2` で終了します。
+
+ルール識別子の配列を書くと、列挙したルールだけが既定の設定で動きます。
 
 ```json
 [
@@ -43,6 +72,10 @@ mdlint-ja Articles
   "ja.heading.no-terminal-punctuation"
 ]
 ```
+
+未知の識別子や、そのルールが受け付けないオプションは、警告を標準エラーに出力して無視します。値の型や範囲が正しくない場合は、エラーを表示して終了コード `64` で終了します。
+
+`ja.comma.max-count` と `ja.sentence.max-length` は、以前は `ja.comma.max-three` と `ja.sentence.max-one-hundred-characters` という名前でした。設定ファイルでは以前の名前も引き続き使えます。
 
 ## ファイルの一部でルールを無効にする
 
@@ -53,7 +86,7 @@ HTML コメントを書くと、ファイルの一部だけルールを無効に
 ここは検査も自動修正もされません.
 <!-- mdlint-enable -->
 
-<!-- mdlint-disable-next-line ja.comma.max-three -->
+<!-- mdlint-disable-next-line ja.comma.max-count -->
 この行だけ、指定したルールが無効になります。
 ```
 
