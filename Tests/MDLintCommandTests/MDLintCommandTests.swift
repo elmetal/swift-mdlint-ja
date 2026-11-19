@@ -228,4 +228,135 @@ struct MDLintCommandTests {
     #expect(result.stderr.contains("--format"))
     #expect(result.stderr.contains("json"))
   }
+
+  // MARK: Configuration file
+
+  @Test("runs only the rules listed in an array configuration")
+  func runsOnlyRulesListedInArrayConfiguration() throws {
+    let root = try makeTree([
+      "s.md": "これは Test です.\n",
+      "config.json": "[\"ja.period.prefer-fullwidth\", \"ja.comma.max-three\", \"no.such-rule\"]",
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--config", "config.json", "s.md"], in: root)
+
+    let lines = result.stdout.split(separator: "\n")
+    #expect(result.status == 0)
+    #expect(lines.count == 1)
+    #expect(lines.first?.contains("[ja.period.prefer-fullwidth]") == true)
+    #expect(result.stderr == "warning: Ignoring unknown rule identifiers: no.such-rule\n")
+  }
+
+  @Test("applies the options and severities of an object configuration")
+  func appliesObjectConfiguration() throws {
+    let config = """
+      {
+        "rules": {
+          "ja.comma.max-count": { "max": 1, "severity": "error" },
+          "ja.sentence.max-length": { "max": 5, "severity": "info" },
+          "ja.spacing.no-space-between-japanese-and-english": false
+        }
+      }
+      """
+    let root = try makeTree(["s.md": "これは Test で、長く、続きます.\n", "config.json": config])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let text = try runMDLint(["--config", "config.json", "s.md"], in: root)
+    let gha = try runMDLint(["--config", "config.json", "--format", "gha", "s.md"], in: root)
+
+    let textLines = text.stdout.split(separator: "\n").map(String.init)
+    #expect(text.status == 0)
+    #expect(text.stderr.isEmpty)
+    #expect(textLines.count == 3)
+    #expect(textLines.contains { $0.hasPrefix("[ERROR]") && $0.contains("[ja.comma.max-count]") })
+    #expect(
+      textLines.contains { $0.hasPrefix("[INFO]") && $0.contains("[ja.sentence.max-length]") })
+    #expect(
+      textLines.contains {
+        $0.hasPrefix("[WARNING]") && $0.contains("[ja.period.prefer-fullwidth]")
+      }
+    )
+
+    let ghaLines = gha.stdout.split(separator: "\n").map(String.init)
+    #expect(ghaLines.count == 3)
+    #expect(ghaLines.filter { $0.hasPrefix("::error ") }.count == 1)
+    #expect(ghaLines.filter { $0.hasPrefix("::notice ") }.count == 1)
+    #expect(ghaLines.filter { $0.hasPrefix("::warning ") }.count == 1)
+  }
+
+  @Test("warns about options that a rule does not accept")
+  func warnsAboutUnknownOptions() throws {
+    let root = try makeTree([
+      "s.md": "これはテストです。\n",
+      "config.json": "{\"rules\": {\"ja.kana.no-halfwidth\": {\"max\": 3, \"limit\": 1}}}",
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--config", "config.json", "s.md"], in: root)
+
+    #expect(result.status == 0)
+    #expect(
+      result.stderr == "warning: Ignoring unknown options of ja.kana.no-halfwidth: limit, max\n")
+  }
+
+  @Test(
+    "lets --politeness-style override the configuration file",
+    arguments: [
+      ([String](), "です"), (["--politeness-style", "desumasu"], "である"),
+      (["--politeness-style", "auto"], ""),
+    ])
+  func politenessStyleOptionOverridesConfiguration(arguments: [String], reported: String) throws {
+    let root = try makeTree([
+      "s.md": "これはテストです。\n\nこれはテストである。\n",
+      "config.json": "{\"rules\": {\"ja.style.no-mix-dearu-desumasu\": {\"style\": \"dearu\"}}}",
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(arguments + ["--config", "config.json", "s.md"], in: root)
+
+    let lines = result.stdout.split(separator: "\n").filter { $0.contains("[ja.style.") }
+    #expect(result.status == 0)
+    if reported.isEmpty {
+      // Neither style is in the majority, so `auto` reports nothing.
+      #expect(lines.isEmpty)
+    } else {
+      #expect(lines.count == 1)
+      #expect(lines.first?.contains(reported == "です" ? "s.md:1:" : "s.md:3:") == true)
+    }
+  }
+
+  @Test(
+    "rejects an invalid configuration file with a usage error",
+    arguments: [
+      ("{\"rules\": {\"ja.comma.max-count\": {\"max\": 0}}}", "must be an integer of 1 or more"),
+      ("{\"rules\": {\"ja.kana.no-halfwidth\": {\"severity\": \"fatal\"}}}", "\"severity\""),
+      ("{\"rule\": {}}", "unknown key \"rule\""),
+      ("\"ja.kana.no-halfwidth\"", "expected an array of rule identifiers or an object"),
+      ("{", "is not valid JSON"),
+    ])
+  func rejectsInvalidConfiguration(config: String, message: String) throws {
+    let root = try makeTree(["s.md": "これはテストです.\n", "config.json": config])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--config", "config.json", "s.md"], in: root)
+
+    #expect(result.status == 64)
+    #expect(result.stdout.isEmpty)
+    #expect(result.stderr.contains("config.json"))
+    #expect(result.stderr.contains(message))
+  }
+
+  @Test("keeps the exit codes independent of severity")
+  func exitCodesDoNotDependOnSeverity() throws {
+    let root = try makeTree([
+      "s.md": "これはテストです.\n",
+      "error.json": "{\"rules\": {\"ja.period.prefer-fullwidth\": {\"severity\": \"error\"}}}",
+      "info.json": "{\"rules\": {\"ja.period.prefer-fullwidth\": {\"severity\": \"info\"}}}",
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    #expect(try runMDLint(["--config", "error.json", "s.md"], in: root).status == 0)
+    #expect(try runMDLint(["--config", "info.json", "--strict", "s.md"], in: root).status == 2)
+  }
 }

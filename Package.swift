@@ -44,6 +44,7 @@ let package = Package(
       dependencies: [
         "MDLintCore",
         "MDLintRules",
+        .product(name: "Markdown", package: "swift-markdown"),
       ]
     ),
     .testTarget(
@@ -68,6 +69,7 @@ let package = Package(
       name: "MDLintConfigTests",
       dependencies: [
         "MDLintConfig",
+        "MDLintCore",
         "MDLintRules",
         .product(name: "Markdown", package: "swift-markdown"),
       ]

@@ -99,4 +99,35 @@ struct JapaneseCommaLimitRuleTests {
     #expect(diagnostics.count == 1)
     #expect(diagnostic.column == 17)
   }
+
+  @Test func usesTheGivenLimit() throws {
+    let content = "一、二、三、四、五、六。"
+
+    #expect(JapaneseCommaLimitRule(maxCommaCount: 5).diagnostics(for: content).isEmpty)
+
+    let rule = JapaneseCommaLimitRule(maxCommaCount: 1)
+    let diagnostic = try #require(rule.diagnostics(for: content).first)
+    // The second comma is the first one over the limit.
+    #expect(diagnostic.column == 4)
+    #expect(diagnostic.ruleID == "ja.comma.max-count")
+    #expect(diagnostic.message.contains("2つ以上"))
+    #expect(rule.description == "一文に含める読点は1つまでにしてください。")
+  }
+
+  @Test func keepsTheDefaultWordingForTheDefaultLimit() throws {
+    let rule = JapaneseCommaLimitRule()
+    let diagnostic = try #require(rule.diagnostics(for: "一、二、三、四、五。").first)
+
+    #expect(rule.description == "一文に含める読点は3つまでにしてください。")
+    #expect(diagnostic.message.hasPrefix("一文に読点が4つ以上あります（読点の数: 4）。"))
+  }
+
+  @Test func countsLargeLimitsWithAnotherCounter() throws {
+    let rule = JapaneseCommaLimitRule(maxCommaCount: 10)
+    let content = String(repeating: "あ、", count: 11) + "終わり。"
+    let diagnostic = try #require(rule.diagnostics(for: content).first)
+
+    #expect(rule.description == "一文に含める読点は10個までにしてください。")
+    #expect(diagnostic.message.contains("11個以上"))
+  }
 }

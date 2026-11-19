@@ -8,7 +8,9 @@ The executable is defined by the `MDLintCommand` type, which uses `ArgumentParse
 
 ## Loading lint rules
 
-When the command starts it creates a `RuleConfigurationLoader`. The loader reads the optional configuration file to determine which rules from `MDLintRules` should be active. Unknown identifiers are reported to standard error but are otherwise ignored so that linting can continue.
+When the command starts it creates a `RuleConfigurationLoader`. The loader reads the optional configuration file to determine which rules from `MDLintRules` should be active and with which options. The file is either an array of the rule identifiers to run, or an object that turns default rules off and sets options such as a limit or a severity. Unknown identifiers and unknown options are reported to standard error but are otherwise ignored so that linting can continue. A value of the wrong type or out of range stops the command with a validation error.
+
+A severity from the configuration file is applied by wrapping the rule: the wrapper passes the rule's diagnostics on with the configured severity, so the rules themselves do not know about it.
 
 ## Resolving inputs
 

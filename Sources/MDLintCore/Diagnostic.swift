@@ -8,7 +8,7 @@ import Foundation
 /// diagnostics to communicate actionable feedback to end users and to tooling
 /// that integrates with the linter.
 public struct Diagnostic: Codable, Hashable {
-  public enum Severity: String, Codable { case info, warning, error }
+  public enum Severity: String, Codable, Sendable { case info, warning, error }
 
   public let file: URL
   public let line: Int

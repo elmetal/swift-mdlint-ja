@@ -33,14 +33,14 @@ A configuration file chooses the rules for a whole run. To make an exception for
 Each of the three comments accepts rule identifiers after the keyword, separated by spaces or commas. The comment then applies to those rules only. The identifiers are the ones shown in the `text` output and used in configuration files.
 
 ```markdown
-<!-- mdlint-disable ja.comma.max-three ja.period.prefer-fullwidth -->
+<!-- mdlint-disable ja.comma.max-count ja.period.prefer-fullwidth -->
 
 ...
 
-<!-- mdlint-enable ja.comma.max-three -->
+<!-- mdlint-enable ja.comma.max-count -->
 ```
 
-After the second comment in this example, `ja.comma.max-three` is on again and `ja.period.prefer-fullwidth` is still off. `<!-- mdlint-enable -->` without identifiers turns every rule back on.
+After the second comment in this example, `ja.comma.max-count` is on again and `ja.period.prefer-fullwidth` is still off. `<!-- mdlint-enable -->` without identifiers turns every rule back on.
 
 An identifier that belongs to no rule has no effect and is not reported.
 
