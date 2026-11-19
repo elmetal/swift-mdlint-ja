@@ -17,6 +17,7 @@ mdlint-ja -f README.md
 - If a file cannot be read as UTF-8, it is skipped with a warning on standard error.
 - If the fixed content cannot be written back, a warning is printed on standard error and the diagnostics for the unmodified file are reported.
 - Code blocks, inline code, and raw HTML are never modified.
+- Lines on which a rule is turned off by a comment are not modified by that rule. See <doc:DisableComments>.
 
 ## Workflow tips
 
