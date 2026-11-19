@@ -12,7 +12,7 @@ import Markdown
 /// Only the Unicode general category `Cc` is targeted (tab and line
 /// terminators excepted). Format characters (`Cf`) such as the zero-width
 /// joiner are left alone because emoji sequences depend on them.
-public struct ControlCharacterRule: Rule, AutoFixable {
+public struct ControlCharacterRule: Rule {
   public let id = "md.characters.no-control"
   public let description = "制御文字を含めないでください。"
 
@@ -22,9 +22,14 @@ public struct ControlCharacterRule: Rule, AutoFixable {
     var diagnostics: [Diagnostic] = []
     for (lineIndex, line) in originalText.sourceLines.enumerated() {
       // Columns count characters, as in every other rule, not Unicode scalars.
-      for (columnOffset, character) in line.enumerated() {
+      for (columnOffset, index) in line.indices.enumerated() {
+        let character = line[index]
         for scalar in character.unicodeScalars where Self.isDisallowedControl(scalar) {
           let codePoint = String(format: "U+%04X", scalar.value)
+          // The fix keeps whatever else the character consists of.
+          var kept = String.UnicodeScalarView()
+          kept.append(
+            contentsOf: character.unicodeScalars.lazy.filter { !Self.isDisallowedControl($0) })
           let diagnostic = Diagnostic(
             file: fileURL,
             line: lineIndex + 1,
@@ -32,7 +37,10 @@ public struct ControlCharacterRule: Rule, AutoFixable {
             ruleID: id,
             message: "制御文字 (\(codePoint)) を削除してください。",
             severity: .warning,
-            fixIt: "制御文字を削除"
+            fixIt: FixIt(
+              description: "制御文字を削除",
+              replacing: index..<line.index(after: index), in: line, lineNumber: lineIndex + 1,
+              with: String(kept))
           )
           diagnostics.append(diagnostic)
         }
@@ -40,13 +48,6 @@ public struct ControlCharacterRule: Rule, AutoFixable {
     }
 
     return diagnostics
-  }
-
-  public func fixing(originalText: String) -> String {
-    var scalars = String.UnicodeScalarView()
-    scalars.append(
-      contentsOf: originalText.unicodeScalars.lazy.filter { !Self.isDisallowedControl($0) })
-    return String(scalars)
   }
 
   private static func isDisallowedControl(_ scalar: Unicode.Scalar) -> Bool {

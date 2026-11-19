@@ -40,7 +40,7 @@ struct ControlCharacterRuleTests {
     let content = "テキスト\u{0007}と\u{0002}改行\n次の行"
     let rule = ControlCharacterRule()
 
-    let fixed = rule.fixing(originalText: content)
+    let fixed = rule.fixed(content)
 
     #expect(fixed == "テキストと改行\n次の行")
   }
@@ -73,6 +73,6 @@ struct ControlCharacterRuleTests {
     )
 
     #expect(diagnostics.isEmpty)
-    #expect(rule.fixing(originalText: content) == content)
+    #expect(rule.fixed(content) == content)
   }
 }

@@ -6,10 +6,10 @@ import Markdown
 ///
 /// Full-width Japanese characters and adjacent ASCII words should appear
 /// without separating spaces. The rule searches each line for whitespace that
-/// divides Japanese and English segments and produces diagnostics with autofix
-/// replacements that collapse the gap. The linter hides code and raw HTML
+/// divides Japanese and English segments and produces diagnostics with
+/// fix-its that delete the gap. The linter hides code and raw HTML
 /// before the rule runs.
-public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
+public struct JapaneseEnglishSpacingRule: Rule {
   public let id = "ja.spacing.no-space-between-japanese-and-english"
   public let description = "和文と英単語の間にスペースは入れないでください。"
 
@@ -27,25 +27,14 @@ public struct JapaneseEnglishSpacingRule: Rule, AutoFixable {
           ruleID: id,
           message: "和文と英単語の間にスペースは入れないでください。",
           severity: .warning,
-          fixIt: "スペースを削除")
+          fixIt: FixIt(
+            description: "スペースを削除", replacing: spaces, in: line, lineNumber: index + 1,
+            with: ""))
         diagnostics.append(diagnostic)
       }
     }
 
     return diagnostics
-  }
-
-  public func fixing(originalText: String) -> String {
-    originalText.mappingSourceLines { line in
-      var fixed = ""
-      var copiedUpTo = line.startIndex
-      for spaces in Self.superfluousSpaces(in: line) {
-        fixed += line[copiedUpTo..<spaces.lowerBound]
-        copiedUpTo = spaces.upperBound
-      }
-      fixed += line[copiedUpTo...]
-      return fixed
-    }
   }
 
   /// Returns the whitespace runs that separate Japanese and Latin text on the

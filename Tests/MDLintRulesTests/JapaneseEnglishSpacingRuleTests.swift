@@ -21,7 +21,7 @@ struct JapaneseEnglishSpacingRuleTests {
     let content = "これは Test です\nSwift を 使う"
     let rule = JapaneseEnglishSpacingRule()
 
-    let fixed = rule.fixing(originalText: content)
+    let fixed = rule.fixed(content)
 
     #expect(fixed == "これはTestです\nSwiftを 使う")
   }
@@ -40,7 +40,7 @@ struct JapaneseEnglishSpacingRuleTests {
     let content = "和 文 の 間"
     let rule = JapaneseEnglishSpacingRule()
 
-    let fixed = rule.fixing(originalText: content)
+    let fixed = rule.fixed(content)
 
     #expect(fixed == content)
   }
@@ -61,7 +61,7 @@ struct JapaneseEnglishSpacingRuleTests {
     let content = "これは Test です\r\nSwift を使う\r\n"
     let rule = JapaneseEnglishSpacingRule()
 
-    #expect(rule.fixing(originalText: content) == "これはTestです\r\nSwiftを使う\r\n")
+    #expect(rule.fixed(content) == "これはTestです\r\nSwiftを使う\r\n")
   }
 
   @Test func leavesInlineCodeAlone() {

@@ -34,7 +34,7 @@ public struct GHADiagnosticFormatStyle: DiagnosticFormatStyle {
     case .warning: level = "warning"
     case .info: level = "notice"
     }
-    let message = diagnostic.message + (diagnostic.fixIt.map { " (fix: \($0))" } ?? "")
+    let message = diagnostic.message + (diagnostic.fixIt.map { " (fix: \($0.description))" } ?? "")
     let file = Self.escapeProperty(diagnostic.file.path)
 
     return

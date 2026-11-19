@@ -44,7 +44,9 @@ struct GHADiagnosticFormatStyleTests {
       ruleID: "example.rule",
       message: "First line\nSecond line",
       severity: .warning,
-      fixIt: "Update value"
+      fixIt: FixIt(
+        description: "Update value", line: 10, column: 2, endLine: 10, endColumn: 3,
+        replacement: "x")
     )
 
     let formatter = GHADiagnosticFormatStyle()
@@ -83,7 +85,9 @@ struct GHADiagnosticFormatStyleTests {
       ruleID: "example.rule",
       message: "100% done\r\nnext",
       severity: .error,
-      fixIt: "line one\nline two"
+      fixIt: FixIt(
+        description: "line one\nline two", line: 1, column: 1, endLine: 1, endColumn: 2,
+        replacement: "")
     )
 
     let formatted = GHADiagnosticFormatStyle().format(diagnostic)

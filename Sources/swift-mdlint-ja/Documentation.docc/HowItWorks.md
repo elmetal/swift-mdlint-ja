@@ -20,6 +20,12 @@ If no paths are provided, the current working directory is scanned. Otherwise, e
 
 All collected files are processed by a `Linter` from `MDLintCore`. The linter returns diagnostics and, when `--fix` is enabled, the fixed content. Fixed content is written back to disk whenever it differs from the original text, and the rewritten file is linted again so that only the remaining violations are reported.
 
+## Applying fixes
+
+A rule that can fix a violation attaches a fix-it to its diagnostic: the range of text to replace, given as lines and columns like the diagnostic itself, and the replacement. The rule finds the violation and describes its fix in the same scan, so what is reported is what gets fixed.
+
+With `--fix`, the linter collects the fix-its of the diagnostics it found and applies those that do not overlap. Of two that overlap, the one that starts earlier is applied, or the one of the earlier rule when both start at the same place. It then checks the result again and repeats, because a fix can uncover another violation, and because the fix-it that had to wait may still apply. For example, a heading that ends in a half-width period first has the period replaced by "。" and then, in the next pass, removed. The linter stops when nothing is left to fix, or after ten passes.
+
 ## Excluding code and HTML
 
 Rules check prose only. Before running the rules, the linter parses the file and replaces the following regions with placeholder characters:
@@ -30,7 +36,7 @@ Rules check prose only. Before running the rules, the linter parses the file and
 
 Text between matching backtick runs on one line is hidden as well when the parser does not treat it as a code span, which happens after an unclosed backtick run earlier in the paragraph.
 
-Each hidden character becomes exactly one placeholder, so reported line and column numbers still match the file. The same masked text is handed to the automatic fixes, and the hidden regions are restored afterwards, which means `--fix` never rewrites code or HTML. Link destinations and front matter are not hidden.
+Each hidden character becomes exactly one placeholder, so reported line and column numbers still match the file. Fix-its refer to the same masked text, and the linter skips a fix-it whose range overlaps a hidden region or would insert text inside one. The hidden regions are restored after the fix-its have been applied, which means `--fix` never rewrites code or HTML. Link destinations and front matter are not hidden.
 
 Inline code and inline HTML stay part of the sentence around them, but their characters do not count toward the sentence-length limit: like URLs, they are often long without making the sentence harder to read.
 
@@ -38,7 +44,7 @@ Inline code and inline HTML stay part of the sentence around them, but their cha
 
 The linter also reads the HTML comments of the parsed file for directives: `<!-- mdlint-disable -->`, `<!-- mdlint-enable -->`, and `<!-- mdlint-disable-next-line -->`, each optionally followed by rule identifiers. From them it works out, for every line, which rules are turned off. See <doc:DisableComments> for the syntax.
 
-The rules themselves do not know about the directives. Each rule checks the whole file, and the linter then discards the diagnostics reported on lines where that rule is off. Automatic fixes work the same way: a rule fixes the whole text, and the linter puts back the lines on which the rule is off. This needs the lines before and after the fix to correspond, so in a file that contains directives a fix that changes the number of lines is not applied.
+The rules themselves do not know about the directives. Each rule checks the whole file, and the linter then discards the diagnostics reported on lines where that rule is off. A discarded diagnostic takes its fix-it with it, so `--fix` leaves those violations alone as well.
 
 ## Reporting diagnostics
 

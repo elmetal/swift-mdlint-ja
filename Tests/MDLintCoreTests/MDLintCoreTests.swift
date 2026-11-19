@@ -36,6 +36,19 @@ struct LinterTests {
     #expect(diagnostics.count == 1)
     #expect(fixed == "good value")
   }
+
+  @Test func reportsTheDiagnosticsOfTheOriginalContentWhenFixing() throws {
+    let linter = Linter(rules: [ReplaceBadRule()])
+
+    let (diagnostics, fixed) = linter.lint(
+      content: "ok\nbad bad", fileURL: sampleFileURL, applyFixes: true)
+
+    // The rule reports one occurrence per pass, so fixing takes two passes,
+    // and the diagnostics are still the ones of the first.
+    #expect(fixed == "ok\ngood good")
+    #expect(diagnostics.map(\.column) == [1])
+    #expect(diagnostics.first?.fixIt?.replacement == "good")
+  }
 }
 
 @Suite("Diagnostic Sorting")
@@ -60,7 +73,7 @@ struct DiagnosticSortingTests {
   }
 }
 
-private struct ReplaceBadRule: Rule, AutoFixable {
+private struct ReplaceBadRule: Rule {
   let id = "test.replace-bad"
   let description = "Replaces the word 'bad' with 'good'"
 
@@ -68,19 +81,20 @@ private struct ReplaceBadRule: Rule, AutoFixable {
     guard let range = originalText.range(of: "bad") else { return [] }
     let linesBefore = originalText[..<range.lowerBound].split(
       separator: "\n", omittingEmptySubsequences: false)
+    let line = linesBefore.count
+    let column = (linesBefore.last?.count ?? 0) + 1
 
     return [
       Diagnostic(
         file: fileURL,
-        line: linesBefore.count,
-        column: (linesBefore.last?.count ?? 0) + 1,
+        line: line,
+        column: column,
         ruleID: id,
-        message: "Replace 'bad' with 'good'"
+        message: "Replace 'bad' with 'good'",
+        fixIt: FixIt(
+          description: "Replace with 'good'", line: line, column: column, endLine: line,
+          endColumn: column + 3, replacement: "good")
       )
     ]
-  }
-
-  func fixing(originalText: String) -> String {
-    originalText.replacingOccurrences(of: "bad", with: "good")
   }
 }

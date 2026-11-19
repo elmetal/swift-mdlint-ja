@@ -1,3 +1,5 @@
+import MDLintCore
+
 /// Shared helpers for rules that scan the Markdown source.
 ///
 /// The linter hides code and raw HTML before it hands the source to a rule
@@ -20,21 +22,6 @@ extension String {
   /// The substrings share indices with the receiver.
   var sourceLines: [Substring] {
     split(omittingEmptySubsequences: false, whereSeparator: \.isLineTerminator)
-  }
-
-  /// Returns the text with `transform` applied to every line, keeping each
-  /// original line terminator untouched.
-  func mappingSourceLines(_ transform: (Substring) -> String) -> String {
-    var result = ""
-    var lineStart = startIndex
-
-    for index in indices where self[index].isLineTerminator {
-      result += transform(self[lineStart..<index])
-      result.append(self[index])
-      lineStart = self.index(after: index)
-    }
-    result += transform(self[lineStart...])
-    return result
   }
 
   /// Returns the 1-based line and column (counted in characters) of `index`.
@@ -63,5 +50,29 @@ extension StringProtocol {
       end = previous
     }
     return end
+  }
+}
+
+extension FixIt {
+  /// Creates a fix-it that replaces part of one line.
+  ///
+  /// - Parameters:
+  ///   - description: A short description of the edit for people.
+  ///   - range: The part of `line` to replace.
+  ///   - line: A line of the text the rule was given, without its line terminator.
+  ///   - lineNumber: The 1-based number of `line`.
+  ///   - replacement: The text that takes the place of `range`.
+  init(
+    description: String, replacing range: Range<Substring.Index>, in line: Substring,
+    lineNumber: Int, with replacement: String
+  ) {
+    let column = line.distance(from: line.startIndex, to: range.lowerBound) + 1
+    self.init(
+      description: description,
+      line: lineNumber,
+      column: column,
+      endLine: lineNumber,
+      endColumn: column + line.distance(from: range.lowerBound, to: range.upperBound),
+      replacement: replacement)
   }
 }

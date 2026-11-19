@@ -6,7 +6,7 @@ import Markdown
 ///
 /// Japanese prose typically concludes sentences with the full-width "。"
 /// character. The rule reviews each line of Markdown text and raises a
-/// diagnostic—along with an autofix suggestion—whenever a Japanese sentence
+/// diagnostic—along with a fix-it—whenever a Japanese sentence
 /// ends the line with "." or "．". The linter hides code and raw HTML before
 /// the rule runs, so a period inside either is left alone.
 ///
@@ -19,7 +19,7 @@ import Markdown
 ///   Japanese sentence on the same line.
 /// - List markers and other periods without Japanese text, such as "1.".
 /// - Runs of periods used as an ellipsis, such as "...".
-public struct JapanesePeriodRule: Rule, AutoFixable {
+public struct JapanesePeriodRule: Rule {
   public let id = "ja.period.prefer-fullwidth"
   public let description = "文末の終止符は「。」に統一してください。"
 
@@ -39,18 +39,13 @@ public struct JapanesePeriodRule: Rule, AutoFixable {
         ruleID: id,
         message: "文末は「。」に統一しましょう（現在: \(period)）。",
         severity: .warning,
-        fixIt: "末尾の \(period) を「。」に置換")
+        // The whitespace that follows the period is not part of the range, so it is kept.
+        fixIt: FixIt(
+          description: "末尾の \(period) を「。」に置換",
+          replacing: index..<line.index(after: index), in: line, lineNumber: i + 1, with: "。"))
       out.append(d)
     }
     return out
-  }
-
-  public func fixing(originalText: String) -> String {
-    originalText.mappingSourceLines { line in
-      guard let index = Self.terminalPeriodIndex(in: line) else { return String(line) }
-      // 行末の "."/ "．" を "。" に置換し、後続の空白は保持する
-      return line[..<index] + "。" + line[line.index(after: index)...]
-    }
   }
 
   /// Returns the index of a "." or "．" that ends a Japanese sentence at the end of the line,
