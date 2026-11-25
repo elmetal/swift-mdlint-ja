@@ -64,7 +64,7 @@ An array of rule identifiers runs only the listed rules, each with its default s
 ]
 ```
 
-Unknown identifiers and unknown options are reported as warnings on standard error and ignored. See <doc:ConfigOption> for the options of each rule, the pattern syntax of `exclude`, and how the configuration file is found.
+Unknown identifiers and unknown options are reported as warnings on standard error and ignored. See <doc:ConfigOption> for the options of each rule, the pattern syntax of `exclude`, and how the configuration file is found. The options include the `terms` of `ja.term.prefer-registered`, the rule that replaces the variants of the terms you register (`サーバ` with `サーバー`, for example).
 
 ## Turning rules off inside a file
 

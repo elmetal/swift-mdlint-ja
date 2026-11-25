@@ -41,3 +41,4 @@ Markdown source.
 - ``JapaneseEnglishSpacingRule``
 - ``JapanesePeriodRule``
 - ``JapanesePolitenessStyleConsistencyRule``
+- ``RegisteredTermRule``

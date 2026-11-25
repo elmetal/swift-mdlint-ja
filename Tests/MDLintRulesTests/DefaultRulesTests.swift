@@ -19,6 +19,14 @@ struct DefaultRulesTests {
     #expect(lengthRule.diagnostics(for: "あいうえおか。").count == 1)
   }
 
+  @Test func termsReachTheRegisteredTermRule() {
+    let options = DefaultRules.Options(terms: [.init(expected: "サーバー", variants: ["サーバ"])])
+    let rule = DefaultRules.Identifier.registeredTerm.makeRule(options: options)
+
+    #expect(rule.diagnostics(for: "サーバを起動する。").count == 1)
+    #expect(DefaultRules.all().allSatisfy { $0.diagnostics(for: "サーバを起動する。").isEmpty })
+  }
+
   @Test(arguments: [
     ("ja.comma.max-count", DefaultRules.Identifier.japaneseCommaLimit),
     ("ja.comma.max-three", .japaneseCommaLimit),

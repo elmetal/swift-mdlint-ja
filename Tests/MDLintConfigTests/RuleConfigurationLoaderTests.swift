@@ -350,6 +350,187 @@ struct RuleConfigurationLoaderObjectTests {
     #expect(lint("一、二、三。", with: rules).map(\.ruleID) == ["ja.comma.max-count"])
   }
 
+  // MARK: Registered terms
+
+  @Test("reports nothing for registered terms until terms are given")
+  func reportsNothingWithoutTerms() throws {
+    let content = "サーバを起動する。"
+
+    for json in [
+      "[\"ja.term.prefer-registered\"]",
+      "{\"rules\": {\"ja.term.prefer-registered\": true}}",
+      "{\"rules\": {\"ja.term.prefer-registered\": {}}}",
+      "{\"rules\": {\"ja.term.prefer-registered\": {\"terms\": []}}}",
+    ] {
+      #expect(lint(content, with: try loadRules(json)).isEmpty)
+    }
+    #expect(
+      lint(content, with: try RuleConfigurationLoader().loadRules(configurationPath: nil)).isEmpty)
+  }
+
+  @Test("reports and fixes the variants of the registered terms")
+  func loadsTerms() throws {
+    let rules = try loadRules(
+      """
+      {
+        "rules": {
+          "ja.term.prefer-registered": {
+            "terms": [
+              { "expected": "サーバー", "variants": ["サーバ"] },
+              { "expected": "ユーザー", "variants": ["ユーザ", "ユーザ-"] },
+              { "expected": "ユーザビリティ", "variants": [] }
+            ]
+          }
+        }
+      }
+      """)
+    let content = "ユーザ-が `サーバ` でサーバのユーザビリティを確かめる。\n"
+
+    let (diagnostics, fixed) = Linter(rules: rules).lint(
+      content: content, fileURL: sampleFileURL, applyFixes: true)
+
+    #expect(rules.map(\.id) == allRuleIDs)
+    #expect(
+      diagnostics.map(\.ruleID) == ["ja.term.prefer-registered", "ja.term.prefer-registered"])
+    #expect(diagnostics.map(\.column) == [1, 14])
+    #expect(fixed == "ユーザーが `サーバ` でサーバーのユーザビリティを確かめる。\n")
+  }
+
+  @Test("reports registered terms with the configured severity")
+  func reportsTermsWithConfiguredSeverity() throws {
+    let rules = try loadRules(
+      """
+      {"rules": {"ja.term.prefer-registered": {
+        "severity": "error", "terms": [{"expected": "サーバー", "variants": ["サーバ"]}]
+      }}}
+      """)
+
+    let (diagnostics, fixed) = Linter(rules: rules).lint(
+      content: "サーバを起動する。\n", fileURL: sampleFileURL, applyFixes: true)
+
+    #expect(diagnostics.map(\.severity) == [.error])
+    #expect(fixed == "サーバーを起動する。\n")
+  }
+
+  @Test("warns about terms given to another rule and about other options of the term rule")
+  func warnsAboutMisplacedTerms() throws {
+    let path = try makeConfigurationFile(
+      """
+      {
+        "rules": {
+          "ja.kana.no-halfwidth": {"terms": [{"expected": 1}]},
+          "ja.term.prefer-registered": {
+            "max": 3, "terms": [{"expected": "サーバー", "variants": ["サーバ"]}]
+          }
+        }
+      }
+      """)
+    var warnings: [String: [String]] = [:]
+    let loader = RuleConfigurationLoader(unknownOptionHandler: { warnings[$0] = $1 })
+
+    let rules = try loader.loadRules(configurationPath: path)
+
+    #expect(warnings == ["ja.kana.no-halfwidth": ["terms"], "ja.term.prefer-registered": ["max"]])
+    #expect(lint("サーバを起動する。", with: rules).map(\.ruleID) == ["ja.term.prefer-registered"])
+  }
+
+  @Test(
+    "fails for terms of the wrong shape",
+    arguments: [
+      (
+        "{\"サーバー\": [\"サーバ\"]}",
+        "\"terms\" of \"ja.term.prefer-registered\" must be an array of objects with \"expected\" and \"variants\""
+      ),
+      (
+        "\"サーバ\"",
+        "\"terms\" of \"ja.term.prefer-registered\" must be an array of objects with \"expected\" and \"variants\""
+      ),
+      (
+        "null",
+        "\"terms\" of \"ja.term.prefer-registered\" must be an array of objects with \"expected\" and \"variants\""
+      ),
+      (
+        "[\"サーバ\"]",
+        "\"terms[0]\" of \"ja.term.prefer-registered\" must be an object with a string \"expected\" and an array of strings \"variants\""
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": []}, {\"expected\": \"ユーザー\"}]",
+        "\"terms[1]\" of \"ja.term.prefer-registered\" must be an object with a string \"expected\" and an array of strings \"variants\""
+      ),
+      (
+        "[{\"variants\": [\"サーバ\"]}]",
+        "\"terms[0]\" of \"ja.term.prefer-registered\" must be an object with a string \"expected\" and an array of strings \"variants\""
+      ),
+      (
+        "[{\"expected\": [\"サーバー\"], \"variants\": [\"サーバ\"]}]",
+        "\"terms[0]\" of \"ja.term.prefer-registered\" must be an object with a string \"expected\" and an array of strings \"variants\""
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": \"サーバ\"}]",
+        "\"terms[0]\" of \"ja.term.prefer-registered\" must be an object with a string \"expected\" and an array of strings \"variants\""
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": [\"サーバ\", 1]}]",
+        "\"variants\" of \"terms[0]\" of \"ja.term.prefer-registered\" must be an array of strings"
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": [], \"variant\": [\"サーバ\"]}]",
+        "\"terms[0]\" of \"ja.term.prefer-registered\" has the unknown key \"variant\"; the supported keys are \"expected\" and \"variants\""
+      ),
+    ])
+  func failsForTermsOfWrongShape(terms: String, reason: String) {
+    #expect(throws: RuleConfigurationLoader.Error.invalidConfiguration(reason)) {
+      try loadRules("{\"rules\": {\"ja.term.prefer-registered\": {\"terms\": \(terms)}}}")
+    }
+  }
+
+  @Test(
+    "fails for spellings that cannot be used and for terms that contradict each other",
+    arguments: [
+      (
+        "[{\"expected\": \"\", \"variants\": [\"サーバ\"]}]",
+        "\"terms[0]\" of \"ja.term.prefer-registered\" has an empty spelling"
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": []}, {\"expected\": \"ユーザー\", \"variants\": [\"\"]}]",
+        "\"terms[1]\" of \"ja.term.prefer-registered\" has an empty spelling"
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": [\"サー\\nバ\"]}]",
+        "\"terms[0]\" of \"ja.term.prefer-registered\" has a spelling with a line break or a reserved character"
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": [\"サーバ\", \"サーバー\"]}]",
+        "\"terms\" of \"ja.term.prefer-registered\" lists \"サーバー\" as both an expected spelling and a variant"
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": [\"サーバ\"]}, {\"expected\": \"サーバ\", \"variants\": [\"鯖\"]}]",
+        "\"terms\" of \"ja.term.prefer-registered\" lists \"サーバ\" as both an expected spelling and a variant"
+      ),
+      (
+        "[{\"expected\": \"サーバー\", \"variants\": [\"鯖\"]}, {\"expected\": \"さば\", \"variants\": [\"鯖\"]}]",
+        "\"terms\" of \"ja.term.prefer-registered\" lists \"鯖\" as a variant of \"サーバー\" and \"さば\""
+      ),
+    ])
+  func failsForUnusableTerms(terms: String, reason: String) {
+    #expect(throws: RuleConfigurationLoader.Error.invalidConfiguration(reason)) {
+      try loadRules("{\"rules\": {\"ja.term.prefer-registered\": {\"terms\": \(terms)}}}")
+    }
+  }
+
+  @Test("accepts a term listed twice and a variant repeated under one expected spelling")
+  func acceptsRepeatedTerms() throws {
+    let rules = try loadRules(
+      """
+      {"rules": {"ja.term.prefer-registered": {"terms": [
+        {"expected": "サーバー", "variants": ["サーバ", "サーバ"]},
+        {"expected": "サーバー", "variants": ["サーバ", "鯖"]}
+      ]}}}
+      """)
+
+    #expect(lint("サーバと鯖", with: rules).map(\.column) == [1, 5])
+  }
+
   // MARK: Invalid input
 
   @Test(

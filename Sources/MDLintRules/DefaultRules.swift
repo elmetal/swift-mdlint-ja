@@ -10,15 +10,20 @@ public enum DefaultRules {
     public var maxCommaCount: Int
     /// The number of characters a sentence may contain.
     public var maxSentenceLength: Int
+    /// The terms whose variants the registered-term rule replaces. The rule
+    /// reports nothing while the list is empty.
+    public var terms: [RegisteredTermRule.Term]
 
     public init(
       politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle = .auto,
       maxCommaCount: Int = JapaneseCommaLimitRule.defaultMaxCommaCount,
-      maxSentenceLength: Int = SentenceLengthLimitRule.defaultMaxLength
+      maxSentenceLength: Int = SentenceLengthLimitRule.defaultMaxLength,
+      terms: [RegisteredTermRule.Term] = []
     ) {
       self.politenessStyle = politenessStyle
       self.maxCommaCount = maxCommaCount
       self.maxSentenceLength = maxSentenceLength
+      self.terms = terms
     }
   }
 
@@ -45,6 +50,7 @@ public enum DefaultRules {
     case japaneseCommaLimit = "ja.comma.max-count"
     case sentenceLengthLimit = "ja.sentence.max-length"
     case japanesePolitenessStyleConsistency = "ja.style.no-mix-dearu-desumasu"
+    case registeredTerm = "ja.term.prefer-registered"
 
     /// The names that rules had before their limits became adjustable.
     ///
@@ -92,6 +98,8 @@ public enum DefaultRules {
         return SentenceLengthLimitRule(maxLength: options.maxSentenceLength)
       case .japanesePolitenessStyleConsistency:
         return JapanesePolitenessStyleConsistencyRule(preferredStyle: options.politenessStyle)
+      case .registeredTerm:
+        return RegisteredTermRule(terms: options.terms)
       }
     }
   }
