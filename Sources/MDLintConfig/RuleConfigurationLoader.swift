@@ -33,6 +33,16 @@ import Markdown
 /// `ja.style.no-mix-dearu-desumasu` accepts `style` (`auto`, `desumasu`, or
 /// `dearu`).
 ///
+/// The object can also list the files to leave out under `exclude`, as
+/// patterns relative to the directory of the configuration file (see
+/// ``PathPattern`` for the syntax):
+///
+/// ```json
+/// {
+///   "exclude": ["vendor/**", "CHANGELOG.md"]
+/// }
+/// ```
+///
 /// Identifiers and option names that are not recognized are reported to the
 /// handlers given to the initializer and otherwise ignored. A value of the
 /// wrong type or out of range makes loading fail with
@@ -44,6 +54,10 @@ public struct RuleConfigurationLoader {
     /// value says what is wrong with it.
     case invalidConfiguration(String)
   }
+
+  /// The name of the configuration file that
+  /// ``findConfigurationFile(from:)`` looks for.
+  public static let defaultFileName = ".mdlint.json"
 
   /// A closure invoked with the identifiers that could not be resolved.
   public typealias UnknownIdentifierHandler = ([String]) -> Void
@@ -75,11 +89,37 @@ public struct RuleConfigurationLoader {
     self.unknownOptionHandler = unknownOptionHandler
   }
 
-  /// Returns the set of lint rules described by the configuration file.
+  /// Returns the path of the nearest configuration file.
   ///
-  /// When `configurationPath` is `nil`, all default rules are returned.
-  /// Unknown identifiers and option names in the configuration are reported
-  /// but ignored.
+  /// The search looks for a file named ``defaultFileName`` in the directory,
+  /// then in each of its parent directories up to the root of the file
+  /// system, and stops at the first one it finds.
+  ///
+  /// - Parameter directoryURL: The directory to start from.
+  /// - Returns: The path of the file, or `nil` when there is none.
+  public func findConfigurationFile(from directoryURL: URL) -> String? {
+    let components = directoryURL.standardizedFileURL.path.split(separator: "/")
+
+    for depth in (0...components.count).reversed() {
+      let directory = "/" + components.prefix(depth).joined(separator: "/")
+      let candidate = URL(fileURLWithPath: directory, isDirectory: true)
+        .appendingPathComponent(Self.defaultFileName).path
+      var isDirectory: ObjCBool = false
+      if fileManager.fileExists(atPath: candidate, isDirectory: &isDirectory),
+        !isDirectory.boolValue
+      {
+        return candidate
+      }
+    }
+    return nil
+  }
+
+  /// Returns the rules and the excluded files described by the
+  /// configuration file.
+  ///
+  /// When `configurationPath` is `nil`, all default rules are returned and
+  /// no file is excluded. Unknown identifiers and option names in the
+  /// configuration are reported but ignored.
   ///
   /// - Parameters:
   ///   - configurationPath: The path to a JSON configuration file.
@@ -89,34 +129,58 @@ public struct RuleConfigurationLoader {
   /// - Throws: ``Error/fileNotFound(_:)`` when the configuration file does
   ///   not exist, ``Error/invalidConfiguration(_:)`` when its contents are
   ///   not a valid configuration, or a `DecodingError` when it is not JSON.
-  /// - Returns: The resolved lint rules.
-  public func loadRules(
+  /// - Returns: The resolved configuration.
+  public func loadConfiguration(
     configurationPath: String?,
     politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle? = nil
-  ) throws -> [Rule] {
+  ) throws -> LintConfiguration {
     var options = DefaultRules.Options()
     if let politenessStyle { options.politenessStyle = politenessStyle }
 
     guard let configurationPath else {
-      return DefaultRules.all(options: options)
+      return LintConfiguration(rules: DefaultRules.all(options: options))
     }
 
     let configurationURL = URL(fileURLWithPath: configurationPath)
     guard fileManager.fileExists(atPath: configurationURL.path) else {
       throw Error.fileNotFound(configurationPath)
     }
+    let directoryURL = configurationURL.deletingLastPathComponent()
 
     let data = try Data(contentsOf: configurationURL)
     switch try JSONDecoder().decode(JSONValue.self, from: data) {
     case .array(let names):
-      return DefaultRules.rules(for: try identifiers(listedIn: names), options: options)
+      return LintConfiguration(
+        rules: DefaultRules.rules(for: try identifiers(listedIn: names), options: options),
+        directoryURL: directoryURL)
     case .object(let configuration):
+      if let unknownKey = configuration.keys.sorted().first(where: {
+        $0 != "rules" && $0 != "exclude"
+      }) {
+        throw Error.invalidConfiguration(
+          "unknown key \"\(unknownKey)\"; the supported keys are \"rules\" and \"exclude\"")
+      }
       let settings = try settings(from: configuration)
-      return rules(for: settings, politenessStyle: politenessStyle)
+      return LintConfiguration(
+        rules: rules(for: settings, politenessStyle: politenessStyle),
+        excludePatterns: try excludePatterns(from: configuration),
+        directoryURL: directoryURL)
     default:
       throw Error.invalidConfiguration(
         "expected an array of rule identifiers or an object with a \"rules\" key")
     }
+  }
+
+  /// Returns the set of lint rules described by the configuration file.
+  ///
+  /// This is ``loadConfiguration(configurationPath:politenessStyle:)``
+  /// without the excluded files.
+  public func loadRules(
+    configurationPath: String?,
+    politenessStyle: JapanesePolitenessStyleConsistencyRule.PreferredStyle? = nil
+  ) throws -> [Rule] {
+    try loadConfiguration(configurationPath: configurationPath, politenessStyle: politenessStyle)
+      .rules
   }
 }
 
@@ -159,10 +223,6 @@ extension RuleConfigurationLoader {
   private func settings(from configuration: [String: JSONValue]) throws
     -> [DefaultRules.Identifier: Setting]
   {
-    if let unknownKey = configuration.keys.sorted().first(where: { $0 != "rules" }) {
-      throw Error.invalidConfiguration(
-        "unknown key \"\(unknownKey)\"; the only supported key is \"rules\"")
-    }
     guard let rules = configuration["rules"] else { return [:] }
     guard case .object(let entries) = rules else {
       throw Error.invalidConfiguration("\"rules\" must be an object keyed by rule identifier")
@@ -266,6 +326,29 @@ extension RuleConfigurationLoader {
     of rule: Base, with severity: Diagnostic.Severity
   ) -> any Rule {
     SeverityOverride(base: rule, severity: severity)
+  }
+}
+
+// MARK: - Excluded files
+
+extension RuleConfigurationLoader {
+  private func excludePatterns(from configuration: [String: JSONValue]) throws -> [PathPattern] {
+    guard let exclude = configuration["exclude"] else { return [] }
+    guard case .array(let values) = exclude else {
+      throw Error.invalidConfiguration("\"exclude\" must be an array of path patterns")
+    }
+
+    return try values.map { value in
+      guard case .string(let string) = value else {
+        throw Error.invalidConfiguration("\"exclude\" must be an array of path patterns")
+      }
+      guard let pattern = PathPattern(string) else {
+        throw Error.invalidConfiguration(
+          "the \"exclude\" pattern \"\(string)\" must be a path relative to the configuration file"
+            + " that is not empty and has no \"..\"")
+      }
+      return pattern
+    }
   }
 }
 

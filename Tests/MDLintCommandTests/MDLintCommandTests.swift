@@ -360,3 +360,302 @@ struct MDLintCommandTests {
     #expect(try runMDLint(["--config", "info.json", "--strict", "s.md"], in: root).status == 2)
   }
 }
+
+/// A file with one violation, of `ja.period.prefer-fullwidth`.
+private let violating = "これはテストです.\n"
+
+/// Turns off the only rule that `violating` breaks.
+private let periodRuleOff = "{\"rules\": {\"ja.period.prefer-fullwidth\": false}}"
+
+/// The files that have diagnostics in the output, relative to `root`.
+private func reportedFiles(_ result: CommandResult, under root: URL) -> [String] {
+  let marker = root.lastPathComponent + "/"
+  let files = result.stdout.split(separator: "\n").compactMap { line -> String? in
+    guard let range = line.range(of: marker) else { return nil }
+    return line[range.upperBound...].split(separator: ":").first.map(String.init)
+  }
+  return Set(files).sorted()
+}
+
+@Suite("mdlint-ja command: finding the configuration file")
+struct MDLintCommandDiscoveryTests {
+  @Test("uses .mdlint.json from the current directory")
+  func usesFileInCurrentDirectory() throws {
+    let root = try makeTree(["s.md": violating, ".mdlint.json": periodRuleOff])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["s.md"], in: root)
+
+    #expect(result.status == 0)
+    #expect(result.stderr.isEmpty)
+    #expect(result.stdout.contains("No rule violations"))
+  }
+
+  @Test("uses .mdlint.json from a parent directory", arguments: [["s.md"], [], ["."], ["../.."]])
+  func usesFileInParentDirectory(arguments: [String]) throws {
+    let root = try makeTree(["docs/guide/s.md": violating, ".mdlint.json": periodRuleOff])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(arguments, in: root.appendingPathComponent("docs/guide"))
+
+    #expect(result.status == 0)
+    #expect(result.stderr.isEmpty)
+    #expect(result.stdout.contains("No rule violations"))
+  }
+
+  @Test("uses the nearest .mdlint.json and does not merge it with the ones above")
+  func usesNearestFile() throws {
+    let root = try makeTree([
+      "docs/s.md": "これは Test です.\n",
+      ".mdlint.json": periodRuleOff,
+      "docs/.mdlint.json":
+        "{\"rules\": {\"ja.spacing.no-space-between-japanese-and-english\": false}}",
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let nearest = try runMDLint(["s.md"], in: root.appendingPathComponent("docs"))
+    let fromRoot = try runMDLint(["docs/s.md"], in: root)
+
+    // The file is chosen by the current directory, not by the linted file.
+    #expect(nearest.stdout.contains("[ja.period.prefer-fullwidth]"))
+    #expect(!nearest.stdout.contains("[ja.spacing."))
+    #expect(!fromRoot.stdout.contains("[ja.period.prefer-fullwidth]"))
+    #expect(fromRoot.stdout.contains("[ja.spacing."))
+  }
+
+  @Test("runs every rule with its defaults when there is no configuration file")
+  func runsDefaultsWithoutFile() throws {
+    let root = try makeTree(["docs/s.md": violating, "mdlint.json": periodRuleOff])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--strict"], in: root.appendingPathComponent("docs"))
+    let withoutDiscovery = try runMDLint(
+      ["--strict", "--no-config"], in: root.appendingPathComponent("docs"))
+
+    #expect(result.status == 2)
+    #expect(result.stderr.isEmpty)
+    #expect(result.stdout.contains("[ja.period.prefer-fullwidth]"))
+    #expect(result.stdout == withoutDiscovery.stdout)
+  }
+
+  @Test("lets --config take precedence over .mdlint.json")
+  func configOptionTakesPrecedence() throws {
+    let root = try makeTree([
+      "s.md": "これは Test です.\n",
+      ".mdlint.json": periodRuleOff,
+      "other.json": "[\"ja.period.prefer-fullwidth\"]",
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let discovered = try runMDLint(["s.md"], in: root)
+    let explicit = try runMDLint(["--config", "other.json", "s.md"], in: root)
+
+    #expect(!discovered.stdout.contains("[ja.period.prefer-fullwidth]"))
+    #expect(discovered.stdout.contains("[ja.spacing."))
+    let lines = explicit.stdout.split(separator: "\n")
+    #expect(lines.count == 1)
+    #expect(lines.first?.contains("[ja.period.prefer-fullwidth]") == true)
+  }
+
+  @Test("does not fall back to .mdlint.json when the --config file is missing")
+  func missingConfigOptionFileIsAnError() throws {
+    let root = try makeTree(["s.md": violating, ".mdlint.json": periodRuleOff])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--config", "typo.json", "s.md"], in: root)
+
+    #expect(result.status == 64)
+    #expect(result.stdout.isEmpty)
+    #expect(result.stderr.contains("Configuration file not found at typo.json"))
+  }
+
+  @Test("ignores .mdlint.json with --no-config")
+  func noConfigIgnoresFile() throws {
+    let root = try makeTree([
+      "s.md": violating, "vendor/v.md": violating,
+      ".mdlint.json":
+        "{\"rules\": {\"ja.period.prefer-fullwidth\": false}, \"exclude\": [\"vendor\"]}",
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--no-config"], in: root)
+
+    #expect(result.status == 0)
+    #expect(result.stderr.isEmpty)
+    #expect(reportedFiles(result, under: root) == ["s.md", "vendor/v.md"])
+  }
+
+  @Test("does not read an invalid .mdlint.json with --no-config")
+  func noConfigSkipsInvalidFile() throws {
+    let root = try makeTree(["s.md": violating, ".mdlint.json": "{"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    #expect(try runMDLint(["s.md"], in: root).status == 64)
+    #expect(try runMDLint(["--no-config", "s.md"], in: root).status == 0)
+  }
+
+  @Test("rejects --config together with --no-config")
+  func rejectsConfigWithNoConfig() throws {
+    let root = try makeTree(["s.md": violating, "config.json": periodRuleOff])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["--config", "config.json", "--no-config", "s.md"], in: root)
+
+    #expect(result.status == 64)
+    #expect(result.stdout.isEmpty)
+    #expect(result.stderr.contains("--config and --no-config cannot be used together"))
+  }
+
+  @Test("names the discovered file when it is not valid")
+  func namesInvalidDiscoveredFile() throws {
+    let root = try makeTree(["docs/s.md": violating, ".mdlint.json": "{\"exclude\": \"vendor\"}"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["s.md"], in: root.appendingPathComponent("docs"))
+
+    #expect(result.status == 64)
+    #expect(result.stdout.isEmpty)
+    #expect(result.stderr.contains("\(root.lastPathComponent)/.mdlint.json is not valid"))
+    #expect(result.stderr.contains("\"exclude\" must be an array of path patterns"))
+  }
+
+  @Test("still warns about unknown rules in a discovered file")
+  func warnsAboutUnknownRulesInDiscoveredFile() throws {
+    let root = try makeTree([
+      "s.md": "これはテストです。\n", ".mdlint.json": "{\"rules\": {\"no.such-rule\": false}}",
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["s.md"], in: root)
+
+    #expect(result.status == 0)
+    #expect(result.stderr == "warning: Ignoring unknown rule identifiers: no.such-rule\n")
+  }
+}
+
+@Suite("mdlint-ja command: excluded files")
+struct MDLintCommandExcludeTests {
+  private static let tree: [String: String] = [
+    ".mdlint.json": "{\"exclude\": [\"vendor/**\", \"CHANGELOG.md\", \"**/draft-*.md\"]}",
+    "README.md": violating,
+    "CHANGELOG.md": violating,
+    "vendor/v.md": violating,
+    "vendor/deep/w.md": violating,
+    "docs/CHANGELOG.md": violating,
+    "docs/a.md": violating,
+    "docs/draft-1.md": violating,
+    "docs/draft-2.md": violating,
+    "docs/z.md": violating,
+    "docs/vendor/kept.md": violating,
+    "docs/sub/draft-3.md": violating,
+    "docs/sub/s.md": violating,
+  ]
+
+  private static let kept = [
+    "README.md", "docs/CHANGELOG.md", "docs/a.md", "docs/sub/s.md", "docs/vendor/kept.md",
+    "docs/z.md",
+  ]
+
+  @Test("skips the files that match exclude while walking directories")
+  func skipsExcludedFiles() throws {
+    let root = try makeTree(Self.tree)
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint([], in: root)
+    let everything = try runMDLint(["--no-config"], in: root)
+
+    #expect(result.status == 0)
+    #expect(result.stderr.isEmpty)
+    #expect(reportedFiles(result, under: root) == Self.kept)
+    #expect(
+      reportedFiles(everything, under: root)
+        == Self.tree.keys.filter { $0.hasSuffix(".md") }.sorted())
+  }
+
+  @Test("matches the patterns from the directory of the file, wherever the command runs")
+  func matchesFromDirectoryOfConfigurationFile() throws {
+    let root = try makeTree(Self.tree)
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let fromSubdirectory = try runMDLint(["../.."], in: root.appendingPathComponent("docs/sub"))
+    let docsOnly = try runMDLint([], in: root.appendingPathComponent("docs"))
+
+    #expect(reportedFiles(fromSubdirectory, under: root) == Self.kept)
+    #expect(reportedFiles(docsOnly, under: root) == Self.kept.filter { $0.hasPrefix("docs/") })
+  }
+
+  @Test("matches the patterns from the directory of the file given by --config")
+  func matchesFromDirectoryOfConfigOption() throws {
+    let root = try makeTree([
+      "conf/lint.json": "{\"exclude\": [\"docs\"]}",
+      "conf/docs/c.md": violating,
+      "conf/kept.md": violating,
+      "docs/d.md": violating,
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+    let expected = ["conf/kept.md", "docs/d.md"]
+
+    let relative = try runMDLint(["--config", "conf/lint.json"], in: root)
+    let absolute = try runMDLint(
+      ["--config", root.appendingPathComponent("conf/lint.json").path], in: root)
+    let elsewhere = try runMDLint(
+      ["--config", "../conf/lint.json", ".."], in: root.appendingPathComponent("docs"))
+
+    #expect(reportedFiles(relative, under: root) == expected)
+    #expect(reportedFiles(absolute, under: root) == expected)
+    #expect(reportedFiles(elsewhere, under: root) == expected)
+  }
+
+  @Test("skips an excluded file or directory that is named as an argument, without a warning")
+  func skipsExcludedArguments() throws {
+    let root = try makeTree(Self.tree)
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let excludedOnly = try runMDLint(
+      ["--strict", "CHANGELOG.md", "vendor", "vendor/deep/w.md", "docs/draft-1.md"], in: root)
+    let mixed = try runMDLint(["--strict", "CHANGELOG.md", "README.md", "vendor/v.md"], in: root)
+
+    #expect(excludedOnly.status == 0)
+    #expect(excludedOnly.stderr.isEmpty)
+    #expect(excludedOnly.stdout.contains("No rule violations"))
+    #expect(mixed.status == 2)
+    #expect(mixed.stderr.isEmpty)
+    #expect(reportedFiles(mixed, under: root) == ["README.md"])
+  }
+
+  @Test("does not fix excluded files")
+  func doesNotFixExcludedFiles() throws {
+    let root = try makeTree(Self.tree)
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    _ = try runMDLint(["--fix", ".", "CHANGELOG.md", "vendor/v.md"], in: root)
+
+    for path in Self.tree.keys where path.hasSuffix(".md") {
+      let content = try String(contentsOf: root.appendingPathComponent(path), encoding: .utf8)
+      #expect((content == violating) == !Self.kept.contains(path), "\(path)")
+    }
+  }
+
+  @Test("still reports a missing path that matches exclude")
+  func reportsMissingExcludedPath() throws {
+    let root = try makeTree(["a.md": violating, ".mdlint.json": "{\"exclude\": [\"gone.md\"]}"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let result = try runMDLint(["gone.md", "a.md"], in: root)
+
+    #expect(result.status == 1)
+    #expect(result.stderr == "error: gone.md: no such file or directory\n")
+  }
+
+  @Test("matches a file name whether it is stored composed or decomposed")
+  func matchesDecomposedFileName() throws {
+    let root = try makeTree([
+      ".mdlint.json": "{\"exclude\": [\"ガイド.md\"]}",
+      "カ\u{3099}イト\u{3099}.md": violating,
+      "a.md": violating,
+    ])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    #expect(reportedFiles(try runMDLint([], in: root), under: root) == ["a.md"])
+  }
+}
