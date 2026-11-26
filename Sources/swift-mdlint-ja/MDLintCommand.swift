@@ -32,8 +32,17 @@ struct MDLintCommand: ParsableCommand {
 
   @Option(
     name: [.customLong("config")],
-    help: "Path to a JSON file that chooses the rules and sets their options.")
+    help: ArgumentHelp(
+      "Path to a JSON file that chooses the rules, sets their options, and excludes files.",
+      discussion:
+        "Without this option, the nearest .mdlint.json in the current directory or its parents is used."
+    ))
   var configurationPath: String?
+
+  @Flag(
+    name: [.customLong("no-config")],
+    help: "Do not look for .mdlint.json; run every rule with its default settings.")
+  var noConfiguration: Bool = false
 
   @Option(
     name: [.customLong("politeness-style")],
@@ -44,6 +53,12 @@ struct MDLintCommand: ParsableCommand {
 
   @Argument(help: "Markdown files or directories to lint.")
   var paths: [String] = []
+
+  func validate() throws {
+    if configurationPath != nil && noConfiguration {
+      throw ValidationError("--config and --no-config cannot be used together")
+    }
+  }
 
   mutating func run() throws {
     let loader = RuleConfigurationLoader(
@@ -56,21 +71,29 @@ struct MDLintCommand: ParsableCommand {
           "Ignoring unknown options of \(ruleIdentifier): \(optionNames.joined(separator: ", "))")
       })
 
-    let rules: [Rule]
+    // `--config` names the file. Otherwise the nearest `.mdlint.json` is
+    // used, so that a project is linted the same way from any of its
+    // directories.
+    var resolvedPath = configurationPath
+    if resolvedPath == nil && !noConfiguration {
+      resolvedPath = loader.findConfigurationFile(
+        from: URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true))
+    }
+
+    let configuration: LintConfiguration
     do {
-      rules = try loader.loadRules(
-        configurationPath: configurationPath, politenessStyle: politenessStyle)
+      configuration = try loader.loadConfiguration(
+        configurationPath: resolvedPath, politenessStyle: politenessStyle)
     } catch RuleConfigurationLoader.Error.fileNotFound(let path) {
       throw ValidationError("Configuration file not found at \(path)")
     } catch RuleConfigurationLoader.Error.invalidConfiguration(let reason) {
-      throw ValidationError(
-        "Configuration file at \(configurationPath ?? "") is not valid: \(reason)")
+      throw ValidationError("Configuration file at \(resolvedPath ?? "") is not valid: \(reason)")
     } catch is DecodingError {
-      throw ValidationError("Configuration file at \(configurationPath ?? "") is not valid JSON")
+      throw ValidationError("Configuration file at \(resolvedPath ?? "") is not valid JSON")
     }
 
-    let linter = Linter(rules: rules)
-    let (urls, missingPaths) = resolveTargets(paths: paths)
+    let linter = Linter(rules: configuration.rules)
+    let (urls, missingPaths) = resolveTargets(paths: paths, configuration: configuration)
 
     var allDiagnostics: [Diagnostic] = []
 
@@ -123,9 +146,16 @@ struct MDLintCommand: ParsableCommand {
 
   /// Collects the Markdown files to lint.
   ///
+  /// Files and directories that the configuration excludes are left out,
+  /// whether they are found in a directory or named by an argument. Tools
+  /// such as pre-commit hooks pass the changed files as arguments, and the
+  /// exclusion has to hold for them too.
+  ///
   /// - Returns: The files, and the arguments that name neither a file nor a
   ///   directory.
-  private func resolveTargets(paths: [String]) -> (urls: [URL], missingPaths: [String]) {
+  private func resolveTargets(paths: [String], configuration: LintConfiguration) -> (
+    urls: [URL], missingPaths: [String]
+  ) {
     let fm = FileManager.default
     var urls: [URL] = []
     var missingPaths: [String] = []
@@ -149,13 +179,24 @@ struct MDLintCommand: ParsableCommand {
         continue
       }
 
+      if configuration.excludes(input) {
+        continue
+      }
+
       if isDir.boolValue {
         // Hidden entries are skipped so that `.build`, `.git`, and similar
         // directories are neither linted nor rewritten by `--fix`.
         let enumerator = fm.enumerator(
-          at: input, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+          at: input, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])
         while let file = enumerator?.nextObject() as? URL {
-          if file.pathExtension.lowercased() == "md" {
+          if configuration.excludes(file) {
+            // An excluded directory is not entered at all. For a file the
+            // call must not be made: it would skip the rest of the directory
+            // that holds the file.
+            if (try? file.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+              enumerator?.skipDescendants()
+            }
+          } else if file.pathExtension.lowercased() == "md" {
             add(file)
           }
         }

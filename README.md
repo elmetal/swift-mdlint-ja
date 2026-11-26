@@ -26,7 +26,8 @@ Key options:
 - `--fix` / `-f`: Apply available automatic fixes in place.
 - `--format <text|gha>`: Choose plain text output (default) or GitHub Actions format.
 - `--strict`: Exit with a non-zero status code when violations are detected.
-- `--config <path>`: Load a JSON file that chooses the rules and sets their options.
+- `--config <path>`: Load a JSON file that chooses the rules, sets their options, and excludes files. Without it, the nearest `.mdlint.json` is used.
+- `--no-config`: Do not look for `.mdlint.json`.
 - `--politeness-style <auto|desumasu|dearu>`: Control how the politeness-style consistency rule resolves conflicts. Overrides the configuration file.
 
 When no paths are provided the linter scans the current directory recursively for files with the `.md` extension. Hidden files and directories (such as `.build` or `.git`) are skipped while scanning directories. A path that does not exist is reported as an error: the remaining paths are still linted, and the command exits with status code `1`.
@@ -52,7 +53,9 @@ This line is not checked by the named rule.
 
 ### Configuration file
 
-Without a configuration file, every rule runs with its default settings. A configuration file is JSON in one of two forms.
+Put a file named `.mdlint.json` at the top of your project. When `--config` is not given, the command looks for `.mdlint.json` in the current directory and then in each parent directory up to the root of the file system, and uses the first one it finds. `--config <path>` names a file instead, and `--no-config` turns the search off. Without a configuration file, every rule runs with its default settings.
+
+A configuration file is JSON in one of two forms.
 
 An object adjusts the default rule set. Rules that are not mentioned keep running:
 
@@ -71,6 +74,19 @@ An object adjusts the default rule set. Rules that are not mentioned keep runnin
 - `max` sets the limit of `ja.comma.max-count` (default `3`) and `ja.sentence.max-length` (default `100`).
 - `style` (`auto`, `desumasu`, or `dearu`) sets the style for `ja.style.no-mix-dearu-desumasu`.
 
+The object can also exclude files from linting:
+
+```json
+{
+  "exclude": ["vendor/**", "CHANGELOG.md", "**/draft-*.md"]
+}
+```
+
+- `*` matches any number of characters within one path component, `?` matches one character, and `**` as a whole component matches any number of components. Every other character matches itself; character classes, negation, and escaping are not supported.
+- Patterns are relative to the directory of the configuration file and are matched from the start of the path: `CHANGELOG.md` matches only the file next to the configuration file, and `**/CHANGELOG.md` matches the name at any depth.
+- A pattern that matches a directory excludes everything in it.
+- An excluded file is skipped even when it is named on the command line, so that the exclusion also holds for pre-commit hooks.
+
 An array lists the rules to run, each with its default settings:
 
 ```json
@@ -80,7 +96,7 @@ An array lists the rules to run, each with its default settings:
 ]
 ```
 
-Unknown rule identifiers and unknown options are ignored after a warning is printed to standard error. A value of the wrong type or out of range stops the command with an error. The former names `ja.comma.max-three` and `ja.sentence.max-one-hundred-characters` are still accepted for `ja.comma.max-count` and `ja.sentence.max-length`.
+Unknown rule identifiers and unknown options are ignored after a warning is printed to standard error. A value of the wrong type or out of range, or a top-level key other than `rules` and `exclude`, stops the command with an error. The former names `ja.comma.max-three` and `ja.sentence.max-one-hundred-characters` are still accepted for `ja.comma.max-count` and `ja.sentence.max-length`.
 
 ## Documentation
 https://elmetal.github.io/swift-mdlint-ja/documentation/

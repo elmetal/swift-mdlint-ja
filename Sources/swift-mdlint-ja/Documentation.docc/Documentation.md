@@ -32,17 +32,21 @@ Key options include:
 - `--fix` / `-f`: Apply automatic corrections for fixable violations.
 - `--format <text|gha>`: Select the output format (`gha` emits GitHub Actions–compatible annotations).
 - `--strict`: Exit with code `2` when any violation is detected.
-- `--config <path>`: Load a JSON file that chooses the rules and sets their options.
+- `--config <path>`: Load a JSON file that chooses the rules, sets their options, and excludes files. Without it, the nearest `.mdlint.json` in the current directory or its parents is used.
+- `--no-config`: Do not look for `.mdlint.json`.
 - `--politeness-style <auto|desumasu|dearu>`: Choose the style that the politeness-style consistency rule enforces (`auto` follows the majority style of each document). It takes precedence over the configuration file.
 
 A path that does not exist is reported as an error. The remaining paths are still linted, and the command then exits with code `1`.
 
 ## Configuration
 
-A configuration file is JSON. An object with a `rules` key adjusts the default rule set: `false` turns a rule off, and an object sets its options. Rules that the file does not mention keep running with their default settings.
+A configuration file is JSON. Name it `.mdlint.json` and put it at the top of your project: when `--config` is not given, the command uses the first `.mdlint.json` it finds in the current working directory or its parent directories. Without a configuration file, every rule runs with its default settings.
+
+An object with a `rules` key adjusts the default rule set: `false` turns a rule off, and an object sets its options. Rules that the file does not mention keep running with their default settings. An `exclude` key lists patterns of files to leave out, relative to the directory of the configuration file.
 
 ```json
 {
+  "exclude": ["vendor/**", "CHANGELOG.md"],
   "rules": {
     "ja.sentence.max-length": { "max": 120 },
     "ja.comma.max-count": { "max": 4, "severity": "error" },
@@ -60,7 +64,7 @@ An array of rule identifiers runs only the listed rules, each with its default s
 ]
 ```
 
-Unknown identifiers and unknown options are reported as warnings on standard error and ignored. See <doc:ConfigOption> for the options of each rule.
+Unknown identifiers and unknown options are reported as warnings on standard error and ignored. See <doc:ConfigOption> for the options of each rule, the pattern syntax of `exclude`, and how the configuration file is found.
 
 ## Turning rules off inside a file
 

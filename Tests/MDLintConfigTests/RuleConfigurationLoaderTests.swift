@@ -357,11 +357,11 @@ struct RuleConfigurationLoaderObjectTests {
     arguments: [
       (
         "{\"rule\": {}}",
-        "unknown key \"rule\"; the only supported key is \"rules\""
+        "unknown key \"rule\"; the supported keys are \"rules\" and \"exclude\""
       ),
       (
         "{\"rules\": {}, \"ignore\": []}",
-        "unknown key \"ignore\"; the only supported key is \"rules\""
+        "unknown key \"ignore\"; the supported keys are \"rules\" and \"exclude\""
       ),
       (
         "{\"rules\": [\"ja.kana.no-halfwidth\"]}",
@@ -421,5 +421,177 @@ struct RuleConfigurationLoaderObjectTests {
     ) {
       try loadRules("{\"rules\": {\"ja.style.no-mix-dearu-desumasu\": {\"style\": \(value)}}}")
     }
+  }
+}
+
+@Suite("RuleConfigurationLoader: excluded files")
+struct RuleConfigurationLoaderExcludeTests {
+  @Test("reads the patterns and makes them relative to the directory of the file")
+  func readsExcludePatterns() throws {
+    let path = try makeConfigurationFile(
+      """
+      {"exclude": ["vendor/**", "CHANGELOG.md", "**/draft-?.md"]}
+      """)
+    let directoryURL = URL(fileURLWithPath: path).deletingLastPathComponent()
+
+    let configuration = try RuleConfigurationLoader().loadConfiguration(configurationPath: path)
+
+    #expect(
+      configuration.excludePatterns.map(\.description)
+        == ["vendor/**", "CHANGELOG.md", "**/draft-?.md"])
+    #expect(configuration.directoryURL?.standardizedFileURL == directoryURL.standardizedFileURL)
+    #expect(configuration.excludes(directoryURL.appendingPathComponent("vendor/lib/README.md")))
+    #expect(configuration.excludes(directoryURL.appendingPathComponent("CHANGELOG.md")))
+    #expect(configuration.excludes(directoryURL.appendingPathComponent("docs/draft-1.md")))
+    #expect(!configuration.excludes(directoryURL.appendingPathComponent("docs/CHANGELOG.md")))
+    #expect(!configuration.excludes(directoryURL.appendingPathComponent("README.md")))
+  }
+
+  @Test("keeps every default rule when only exclude is given")
+  func keepsDefaultRulesWithExcludeOnly() throws {
+    #expect(try loadRules("{\"exclude\": [\"vendor\"]}").map(\.id) == allRuleIDs)
+  }
+
+  @Test("applies rules and exclude from the same file")
+  func appliesRulesAndExclude() throws {
+    let path = try makeConfigurationFile(
+      """
+      {"rules": {"ja.kana.no-halfwidth": false}, "exclude": ["vendor"]}
+      """)
+
+    let configuration = try RuleConfigurationLoader().loadConfiguration(configurationPath: path)
+
+    #expect(configuration.rules.map(\.id) == allRuleIDs.filter { $0 != "ja.kana.no-halfwidth" })
+    #expect(configuration.excludePatterns.map(\.description) == ["vendor"])
+  }
+
+  @Test(
+    "excludes nothing when the file does not say so",
+    arguments: ["{}", "{\"exclude\": []}", "{\"rules\": {}}", "[\"ja.kana.no-halfwidth\"]"])
+  func excludesNothingByDefault(json: String) throws {
+    let path = try makeConfigurationFile(json)
+
+    let configuration = try RuleConfigurationLoader().loadConfiguration(configurationPath: path)
+
+    #expect(configuration.excludePatterns.isEmpty)
+    #expect(!configuration.excludes(URL(fileURLWithPath: path)))
+  }
+
+  @Test("excludes nothing without a configuration file")
+  func excludesNothingWithoutFile() throws {
+    let configuration = try RuleConfigurationLoader().loadConfiguration(configurationPath: nil)
+
+    #expect(configuration.rules.map(\.id) == allRuleIDs)
+    #expect(configuration.excludePatterns.isEmpty)
+    #expect(configuration.directoryURL == nil)
+  }
+
+  @Test(
+    "fails when exclude is not an array of strings",
+    arguments: [
+      "\"vendor/**\"", "{}", "null", "true", "1", "[1]", "[\"vendor\", null]", "[[\"vendor\"]]",
+    ])
+  func failsForWrongType(value: String) {
+    #expect(
+      throws: RuleConfigurationLoader.Error.invalidConfiguration(
+        "\"exclude\" must be an array of path patterns")
+    ) { try loadRules("{\"exclude\": \(value)}") }
+  }
+
+  @Test(
+    "fails for a pattern that is empty, absolute, or leaves the directory",
+    arguments: ["", "/vendor/**", "../vendor", "docs/../../vendor", "./"])
+  func failsForInvalidPattern(pattern: String) {
+    #expect(
+      throws: RuleConfigurationLoader.Error.invalidConfiguration(
+        "the \"exclude\" pattern \"\(pattern)\" must be a path relative to the configuration file"
+          + " that is not empty and has no \"..\"")
+    ) { try loadRules("{\"exclude\": [\"vendor\", \"\(pattern)\"]}") }
+  }
+
+  @Test("still rejects other top-level keys next to exclude")
+  func rejectsOtherKeys() {
+    #expect(
+      throws: RuleConfigurationLoader.Error.invalidConfiguration(
+        "unknown key \"excludes\"; the supported keys are \"rules\" and \"exclude\"")
+    ) { try loadRules("{\"exclude\": [], \"excludes\": []}") }
+  }
+}
+
+@Suite("RuleConfigurationLoader: finding the configuration file")
+struct RuleConfigurationLoaderDiscoveryTests {
+  /// Creates a directory tree with the given directories and returns its root.
+  private func makeTree(directories: [String], files: [String] = []) throws -> URL {
+    let root = FileManager.default.temporaryDirectory
+      .appendingPathComponent("mdlint-ja-discovery-\(UUID().uuidString)")
+    for directory in directories {
+      try FileManager.default.createDirectory(
+        at: root.appendingPathComponent(directory), withIntermediateDirectories: true)
+    }
+    for file in files {
+      try Data("{}".utf8).write(to: root.appendingPathComponent(file))
+    }
+    return root
+  }
+
+  private func standardizedPath(_ url: URL) -> String { url.standardizedFileURL.path }
+
+  @Test("finds the file in the directory itself")
+  func findsFileInDirectory() throws {
+    let root = try makeTree(directories: ["docs"], files: [".mdlint.json"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let found = RuleConfigurationLoader().findConfigurationFile(from: root)
+
+    #expect(found == standardizedPath(root.appendingPathComponent(".mdlint.json")))
+  }
+
+  @Test("finds the file in a parent directory")
+  func findsFileInParentDirectory() throws {
+    let root = try makeTree(directories: ["docs/guide/ja"], files: [".mdlint.json"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let found = RuleConfigurationLoader().findConfigurationFile(
+      from: root.appendingPathComponent("docs/guide/ja"))
+
+    #expect(found == standardizedPath(root.appendingPathComponent(".mdlint.json")))
+  }
+
+  @Test("prefers the nearest file")
+  func prefersNearestFile() throws {
+    let root = try makeTree(
+      directories: ["docs/guide/ja"], files: [".mdlint.json", "docs/.mdlint.json"])
+    defer { try? FileManager.default.removeItem(at: root) }
+    let loader = RuleConfigurationLoader()
+
+    let nested = standardizedPath(root.appendingPathComponent("docs/.mdlint.json"))
+    #expect(loader.findConfigurationFile(from: root.appendingPathComponent("docs/guide")) == nested)
+    #expect(loader.findConfigurationFile(from: root.appendingPathComponent("docs")) == nested)
+    #expect(
+      loader.findConfigurationFile(from: root)
+        == standardizedPath(root.appendingPathComponent(".mdlint.json")))
+  }
+
+  @Test("does not look into subdirectories or at files with other names")
+  func ignoresSubdirectoriesAndOtherNames() throws {
+    let root = try makeTree(
+      directories: ["docs"], files: ["docs/.mdlint.json", "mdlint.json", ".mdlint.jsonc"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let found = RuleConfigurationLoader().findConfigurationFile(from: root)
+
+    // A file further up, outside the tree, would still be found.
+    #expect(found?.hasPrefix(standardizedPath(root) + "/") != true)
+  }
+
+  @Test("passes over a directory that has the name of the file")
+  func passesOverDirectoryWithTheName() throws {
+    let root = try makeTree(directories: ["docs/.mdlint.json"], files: [".mdlint.json"])
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let found = RuleConfigurationLoader().findConfigurationFile(
+      from: root.appendingPathComponent("docs"))
+
+    #expect(found == standardizedPath(root.appendingPathComponent(".mdlint.json")))
   }
 }
