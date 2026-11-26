@@ -326,9 +326,52 @@ struct MDLintCommandTests {
     }
   }
 
+  @Test("reports and fixes the variants of the terms in the configuration file")
+  func fixesRegisteredTerms() throws {
+    let config = """
+      {
+        "rules": {
+          "ja.term.prefer-registered": {
+            "terms": [
+              { "expected": "サーバー", "variants": ["サーバ"] },
+              { "expected": "ユーザー", "variants": ["ユーザ", "ユーザ-"] }
+            ]
+          }
+        }
+      }
+      """
+    let content = "ユーザ-が `サーバ` でサーバーとサーバを起動する。\n"
+    let root = try makeTree(["s.md": content, "config.json": config])
+    defer { try? FileManager.default.removeItem(at: root) }
+    let file = root.appendingPathComponent("s.md")
+
+    let reported = try runMDLint(["--config", "config.json", "--strict", "s.md"], in: root)
+    let unchanged = try String(contentsOf: file, encoding: .utf8)
+    let fixing = try runMDLint(["--config", "config.json", "--strict", "--fix", "s.md"], in: root)
+    let fixed = try String(contentsOf: file, encoding: .utf8)
+
+    let lines = reported.stdout.split(separator: "\n")
+    #expect(reported.status == 2)
+    #expect(lines.count == 2)
+    #expect(lines.allSatisfy { $0.contains("[ja.term.prefer-registered]") })
+    #expect(lines.first?.contains("s.md:1:1") == true)
+    #expect(lines.last?.contains("s.md:1:19") == true)
+    #expect(unchanged == content)
+    #expect(fixing.status == 0)
+    #expect(fixed == "ユーザーが `サーバ` でサーバーとサーバーを起動する。\n")
+  }
+
   @Test(
     "rejects an invalid configuration file with a usage error",
     arguments: [
+      (
+        "{\"rules\": {\"ja.term.prefer-registered\": {\"terms\": [{\"expected\": \"サーバー\", \"variants\": [\"サーバー\"]}]}}}",
+        "as both an expected spelling and a variant"
+      ),
+      (
+        "{\"rules\": {\"ja.term.prefer-registered\": {\"terms\": {\"サーバー\": [\"サーバ\"]}}}}",
+        "must be an array of objects"
+      ),
       ("{\"rules\": {\"ja.comma.max-count\": {\"max\": 0}}}", "must be an integer of 1 or more"),
       ("{\"rules\": {\"ja.kana.no-halfwidth\": {\"severity\": \"fatal\"}}}", "\"severity\""),
       ("{\"rule\": {}}", "unknown key \"rule\""),

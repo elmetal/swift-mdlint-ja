@@ -62,8 +62,31 @@ mdlint-ja Articles
 | `max` | `ja.comma.max-count` | 一文に含められる読点の数（1 以上の整数） | `3` |
 | `max` | `ja.sentence.max-length` | 一文の文字数の上限（1 以上の整数） | `100` |
 | `style` | `ja.style.no-mix-dearu-desumasu` | `"auto"`、`"desumasu"`、`"dearu"` | `"auto"` |
+| `terms` | `ja.term.prefer-registered` | 表記を揃える用語の配列（後述） | `[]` |
 
 `severity` は違反の表示（`[INFO]`、`[WARNING]`、`[ERROR]`）を変えるだけで、終了コードは変わりません。`--strict` を付けると、どの重大度の違反でも終了コード `2` で終了します。
+
+`ja.term.prefer-registered` は、登録した用語の表記ゆれを報告し、`--fix` で正しい表記に置き換えます。用語を登録するまでは何も報告しません。用語ごとに、正しい表記 `expected` と、置き換える表記の配列 `variants` を書きます。
+
+```json
+{
+  "rules": {
+    "ja.term.prefer-registered": {
+      "terms": [
+        { "expected": "サーバー", "variants": ["サーバ"] },
+        { "expected": "ユーザー", "variants": ["ユーザ", "ユーザ-"] },
+        { "expected": "ユーザビリティ", "variants": [] }
+      ]
+    }
+  }
+}
+```
+
+- 表記は正規表現ではなく文字列として比較します。大文字と小文字は区別します。
+- 同じ位置から複数の表記が一致する場合は、最も長いものを採用します。`expected` もこの比較に加わるため、「サーバー」の中の「サーバ」は報告しません。
+- `variants` が空の用語は、その語を保護します。上の例では「ユーザビリティ」は「ユーザ」で始まりますが、報告しません。
+- URL、リンクや画像のリンク先、リンク参照定義は書き換えません。
+- 同じ表記が `expected` と `variants` の両方にある場合や、同じ表記が 2 つの用語の `variants` にある場合は、エラーを表示して終了コード `64` で終了します。空の表記も同様です。
 
 オブジェクトに `exclude` キーを書くと、パターンに一致するファイルを検査と自動修正の対象から外せます。
 

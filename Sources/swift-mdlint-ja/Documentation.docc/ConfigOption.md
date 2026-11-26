@@ -58,12 +58,53 @@ Rules that the file does not mention keep running with their default settings.
 | `max` | `ja.comma.max-count` | The number of commas a sentence may contain, `1` or more | `3` |
 | `max` | `ja.sentence.max-length` | The number of characters a sentence may contain, `1` or more | `100` |
 | `style` | `ja.style.no-mix-dearu-desumasu` | `"auto"`, `"desumasu"`, or `"dearu"` | `"auto"` |
+| `terms` | `ja.term.prefer-registered` | The terms whose variants are replaced, described under "Registering terms" below | `[]` |
 
 The `--politeness-style` option takes precedence over `style` when both are given.
 
 ### Severity
 
 The severity changes how a violation is labeled: `[INFO]`, `[WARNING]`, or `[ERROR]` in the `text` format, and `notice`, `warning`, or `error` annotations in the `gha` format. It does not change the exit code. With `--strict`, a violation of any severity makes the command exit with code `2`.
+
+### Registering terms
+
+`ja.term.prefer-registered` keeps the spelling of terms consistent. It has no terms of its own and reports nothing until you register some. Each term is an object with two keys, both required:
+
+- `expected` is the spelling to use.
+- `variants` is an array of the spellings to replace with it. It may be empty.
+
+```json
+{
+  "rules": {
+    "ja.term.prefer-registered": {
+      "terms": [
+        { "expected": "サーバー", "variants": ["サーバ"] },
+        { "expected": "ユーザー", "variants": ["ユーザ", "ユーザ-"] },
+        { "expected": "ユーザビリティ", "variants": [] }
+      ]
+    }
+  }
+}
+```
+
+Every occurrence of a variant in prose is reported, and `--fix` replaces it with the expected spelling.
+
+Spellings are plain strings, not patterns. They are compared character by character, so the comparison is case-sensitive, and a variant matches anywhere, also inside a longer word. Three things keep that from going wrong:
+
+- Where several registered spellings start at the same character, the longest one wins, and the search continues after it. Expected spellings take part in this. `サーバ` is therefore not reported inside `サーバー`, and `ユーザ-` is replaced as a whole rather than as `ユーザ` followed by a hyphen.
+- A term with an empty `variants` protects a word. With the configuration above, `ユーザビリティ` is left alone although it starts with the variant `ユーザ`.
+- A variant inside an occurrence of its own expected spelling is never reported, for example `問い合わせ` inside `お問い合わせ`.
+
+Besides code and raw HTML, the rule leaves alone URLs, the part in parentheses of a link or an image (`[text](destination "title")`), and link reference definitions (`[label]: destination`), because a link that is rewritten no longer points to its target.
+
+The terms must not contradict each other. The following mistakes stop the command with exit code `64`:
+
+- A spelling that is both an expected spelling and a variant, of the same term or of two terms.
+- A variant that is listed under two different expected spellings.
+- A spelling that is empty, or that contains a line break or one of the two characters the linter reserves as placeholders for code (U+FFFC and U+E000).
+- A term that lacks `expected` or `variants`, has a value of the wrong type, or has another key.
+
+Listing the same expected spelling twice is allowed, and so is repeating a variant under it.
 
 ## Excluding files
 
@@ -127,4 +168,4 @@ Two rules were renamed when their limits became adjustable. Both forms of the co
 
 - A rule identifier that does not exist is reported as a warning on standard error and ignored.
 - An option that a rule does not accept, such as `max` for a rule without a limit, is reported as a warning on standard error and ignored.
-- Anything else stops the command with exit code `64` and a message that names the file and the problem: a file that is not JSON, a key other than `rules` and `exclude` at the top level, a value of the wrong type, a `max` below `1`, an unknown `severity` or `style`, an `exclude` pattern that is empty, absolute, or contains `..`, or a rule that appears under both its former and its current name. This applies to a `.mdlint.json` that was found by the search as well.
+- Anything else stops the command with exit code `64` and a message that names the file and the problem: a file that is not JSON, a key other than `rules` and `exclude` at the top level, a value of the wrong type, a `max` below `1`, an unknown `severity` or `style`, `terms` that contradict each other, an `exclude` pattern that is empty, absolute, or contains `..`, or a rule that appears under both its former and its current name. This applies to a `.mdlint.json` that was found by the search as well.

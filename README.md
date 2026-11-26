@@ -73,6 +73,23 @@ An object adjusts the default rule set. Rules that are not mentioned keep runnin
 - `severity` (`info`, `warning`, or `error`; default `warning`) is accepted by every rule. It changes the label of a violation, not the exit code.
 - `max` sets the limit of `ja.comma.max-count` (default `3`) and `ja.sentence.max-length` (default `100`).
 - `style` (`auto`, `desumasu`, or `dearu`) sets the style for `ja.style.no-mix-dearu-desumasu`.
+- `terms` registers the terms of `ja.term.prefer-registered`, which reports nothing without them.
+
+`ja.term.prefer-registered` reports the variants of each term and `--fix` replaces them with the expected spelling. Spellings are plain, case-sensitive strings. Where several of them match, the longest wins, so `サーバ` is not reported inside `サーバー`, and a term with an empty `variants` protects a longer word such as `ユーザビリティ`. URLs and link destinations are left alone.
+
+```json
+{
+  "rules": {
+    "ja.term.prefer-registered": {
+      "terms": [
+        { "expected": "サーバー", "variants": ["サーバ"] },
+        { "expected": "ユーザー", "variants": ["ユーザ", "ユーザ-"] },
+        { "expected": "ユーザビリティ", "variants": [] }
+      ]
+    }
+  }
+}
+```
 
 The object can also exclude files from linting:
 
@@ -96,7 +113,7 @@ An array lists the rules to run, each with its default settings:
 ]
 ```
 
-Unknown rule identifiers and unknown options are ignored after a warning is printed to standard error. A value of the wrong type or out of range, or a top-level key other than `rules` and `exclude`, stops the command with an error. The former names `ja.comma.max-three` and `ja.sentence.max-one-hundred-characters` are still accepted for `ja.comma.max-count` and `ja.sentence.max-length`.
+Unknown rule identifiers and unknown options are ignored after a warning is printed to standard error. A value of the wrong type or out of range, or a top-level key other than `rules` and `exclude`, stops the command with an error, and so do terms that contradict each other: a spelling that is both expected and a variant, or a variant of two terms. The former names `ja.comma.max-three` and `ja.sentence.max-one-hundred-characters` are still accepted for `ja.comma.max-count` and `ja.sentence.max-length`.
 
 ## Documentation
 https://elmetal.github.io/swift-mdlint-ja/documentation/

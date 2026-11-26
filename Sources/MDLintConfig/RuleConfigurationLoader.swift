@@ -29,9 +29,22 @@ import Markdown
 /// ```
 ///
 /// Every rule accepts `severity` (`info`, `warning`, or `error`).
-/// `ja.comma.max-count` and `ja.sentence.max-length` accept `max`, and
+/// `ja.comma.max-count` and `ja.sentence.max-length` accept `max`,
 /// `ja.style.no-mix-dearu-desumasu` accepts `style` (`auto`, `desumasu`, or
-/// `dearu`).
+/// `dearu`), and `ja.term.prefer-registered` accepts `terms`, the terms whose
+/// variants it replaces:
+///
+/// ```json
+/// {
+///   "rules": {
+///     "ja.term.prefer-registered": {
+///       "terms": [
+///         { "expected": "サーバー", "variants": ["サーバ"] }
+///       ]
+///     }
+///   }
+/// }
+/// ```
 ///
 /// The object can also list the files to leave out under `exclude`, as
 /// patterns relative to the directory of the configuration file (see
@@ -45,8 +58,8 @@ import Markdown
 ///
 /// Identifiers and option names that are not recognized are reported to the
 /// handlers given to the initializer and otherwise ignored. A value of the
-/// wrong type or out of range makes loading fail with
-/// ``Error/invalidConfiguration(_:)``.
+/// wrong type or out of range, and terms that contradict each other, make
+/// loading fail with ``Error/invalidConfiguration(_:)``.
 public struct RuleConfigurationLoader {
   public enum Error: Swift.Error, Equatable {
     case fileNotFound(String)
@@ -218,6 +231,7 @@ extension RuleConfigurationLoader {
     var severity: Diagnostic.Severity?
     var max: Int?
     var style: JapanesePolitenessStyleConsistencyRule.PreferredStyle?
+    var terms: [RegisteredTermRule.Term]?
   }
 
   private func settings(from configuration: [String: JSONValue]) throws
@@ -287,6 +301,8 @@ extension RuleConfigurationLoader {
               "\"style\" of \"\(name)\" must be \"auto\", \"desumasu\", or \"dearu\"")
           }
           setting.style = style
+        case ("terms", .registeredTerm):
+          setting.terms = try terms(from: value, ofRuleNamed: name)
         default:
           unknownOptions.append(option)
         }
@@ -301,6 +317,66 @@ extension RuleConfigurationLoader {
     }
   }
 
+  /// Reads the terms of the registered-term rule.
+  ///
+  /// Each term is an object with the keys `expected`, a string, and
+  /// `variants`, an array of strings that may be empty.
+  private func terms(from value: JSONValue, ofRuleNamed name: String) throws
+    -> [RegisteredTermRule.Term]
+  {
+    guard case .array(let entries) = value else {
+      throw Error.invalidConfiguration(
+        "\"terms\" of \"\(name)\" must be an array of objects with \"expected\" and \"variants\"")
+    }
+
+    var terms: [RegisteredTermRule.Term] = []
+    for (index, entry) in entries.enumerated() {
+      guard case .object(let fields) = entry,
+        case .string(let expected)? = fields["expected"],
+        case .array(let values)? = fields["variants"]
+      else {
+        throw Error.invalidConfiguration(
+          "\"terms[\(index)]\" of \"\(name)\" must be an object with a string \"expected\" "
+            + "and an array of strings \"variants\"")
+      }
+      // A misspelled key would otherwise turn into a term that does less
+      // than it says.
+      if let unknownKey = fields.keys.sorted().first(where: {
+        $0 != "expected" && $0 != "variants"
+      }) {
+        throw Error.invalidConfiguration(
+          "\"terms[\(index)]\" of \"\(name)\" has the unknown key \"\(unknownKey)\"; "
+            + "the supported keys are \"expected\" and \"variants\"")
+      }
+      let variants = try values.map { value -> String in
+        guard case .string(let variant) = value else {
+          throw Error.invalidConfiguration(
+            "\"variants\" of \"terms[\(index)]\" of \"\(name)\" must be an array of strings")
+        }
+        return variant
+      }
+      terms.append(RegisteredTermRule.Term(expected: expected, variants: variants))
+    }
+
+    do {
+      try RegisteredTermRule.validate(terms)
+    } catch RegisteredTermRule.TermError.unusableSpelling(let spelling, let index) {
+      throw Error.invalidConfiguration(
+        spelling.isEmpty
+          ? "\"terms[\(index)]\" of \"\(name)\" has an empty spelling"
+          : "\"terms[\(index)]\" of \"\(name)\" has a spelling with a line break or a "
+            + "reserved character")
+    } catch RegisteredTermRule.TermError.expectedAndVariant(let spelling) {
+      throw Error.invalidConfiguration(
+        "\"terms\" of \"\(name)\" lists \"\(spelling)\" as both an expected spelling and a variant")
+    } catch RegisteredTermRule.TermError.variantOfSeveralTerms(let spelling, let expected) {
+      let list = expected.map { "\"\($0)\"" }.joined(separator: " and ")
+      throw Error.invalidConfiguration(
+        "\"terms\" of \"\(name)\" lists \"\(spelling)\" as a variant of \(list)")
+    }
+    return terms
+  }
+
   /// Builds the default rule set with the settings applied.
   private func rules(
     for settings: [DefaultRules.Identifier: Setting],
@@ -312,6 +388,7 @@ extension RuleConfigurationLoader {
     if let style = politenessStyle ?? settings[.japanesePolitenessStyleConsistency]?.style {
       options.politenessStyle = style
     }
+    if let terms = settings[.registeredTerm]?.terms { options.terms = terms }
 
     return DefaultRules.Identifier.allCases.compactMap { identifier -> Rule? in
       let setting = settings[identifier] ?? Setting()
